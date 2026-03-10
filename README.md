@@ -1,186 +1,400 @@
-# 🚀 RecruForce 2 - Front-end (Angular)
+# RecruForce2 Frontend - Angular 17 🎨
 
-This repository contains the **front-end web application** of RecruForce 2, developed with **Angular**.  
-It provides recruiters with an intuitive interface to manage job offers, track applications, and view candidate profiles.
+Modern, reactive recruitment platform frontend built with Angular 17+ standalone components.
+
+## 🎯 Features
+
+- **Standalone Components** - Modern Angular architecture
+- **Signals** - Reactive state management
+- **Lazy Loading** - Optimized performance
+- **Tailwind CSS** - Utility-first styling
+- **TypeScript Strict** - Type safety
+- **RxJS Best Practices** - Proper observable management
+- **Role-Based Access** - Guards and permissions
+- **Responsive Design** - Mobile-first approach
 
 ---
 
-## 🛠️ Tech Stack
-
-- **Framework:** Angular (v17+ / Standalone Components)  
-- **Language:** TypeScript  
-- **Styles:** SCSS  
-- **Communication:** RESTful API via Java Spring Boot (`recruforce2-backend-core`)  
-
----
-
-## 💡 Project Architecture
-
-The application follows a **Modular and Domain-Oriented Architecture**, ensuring scalability and maintainability.  
-It uses **Feature Modules** and layered responsibilities (Core / Shared / Modules).
+## 🏗️ Architecture
 
 ```
-
 recruforce2-frontend/
 ├── src/
 │   ├── app/
-│   │   ├── core/           # Global services, interceptors, guards, data models
-│   │   ├── shared/         # Reusable UI components, directives, pipes
-│   │   └── modules/        # Functional feature modules (lazy loaded)
-│   │       ├── auth/       # Authentication (Login, Register, Reset Password)
-│   │       ├── dashboard/  # Main dashboard and statistics
-│   │       ├── job-offer/  # Job offer management
-│   │       ├── candidate/  # Candidate profiles and CVs
-│   │       └── application/ # Application tracking and matching scores
-│   └── environments/       # Environment configuration (Dev, Prod)
-└── package.json
-└── angular.json
-
-````
+│   │   ├── core/                         # Singleton services
+│   │   │   ├── auth/
+│   │   │   │   ├── guards/
+│   │   │   │   │   ├── auth.guard.ts
+│   │   │   │   │   └── role.guard.ts
+│   │   │   │   ├── interceptors/
+│   │   │   │   │   ├── auth.interceptor.ts
+│   │   │   │   │   ├── error.interceptor.ts
+│   │   │   │   │   └── loading.interceptor.ts
+│   │   │   │   └── services/
+│   │   │   │       └── auth.service.ts
+│   │   │   ├── layout/
+│   │   │   │   ├── header/
+│   │   │   │   ├── sidebar/
+│   │   │   │   └── footer/
+│   │   │   └── services/
+│   │   │       ├── api.service.ts
+│   │   │       └── notification.service.ts
+│   │   │
+│   │   ├── shared/                       # Reusable components
+│   │   │   ├── components/
+│   │   │   │   ├── button/
+│   │   │   │   ├── card/
+│   │   │   │   ├── modal/
+│   │   │   │   ├── table/
+│   │   │   │   └── file-upload/
+│   │   │   ├── directives/
+│   │   │   ├── pipes/
+│   │   │   └── models/
+│   │   │
+│   │   ├── features/                     # Feature modules (lazy-loaded)
+│   │   │   ├── auth/
+│   │   │   │   ├── login/
+│   │   │   │   └── register/
+│   │   │   ├── dashboard/
+│   │   │   │   └── dashboard.component.ts
+│   │   │   ├── candidates/
+│   │   │   │   ├── candidate-list/
+│   │   │   │   ├── candidate-detail/
+│   │   │   │   └── candidate-form/
+│   │   │   ├── job-offers/
+│   │   │   │   ├── job-list/
+│   │   │   │   ├── job-detail/
+│   │   │   │   └── job-form/
+│   │   │   ├── applications/
+│   │   │   │   ├── application-list/
+│   │   │   │   └── application-detail/
+│   │   │   ├── interviews/
+│   │   │   │   ├── interview-list/
+│   │   │   │   └── interview-form/
+│   │   │   └── public/                  # Public zone
+│   │   │       ├── job-board/
+│   │   │       └── apply/
+│   │   │
+│   │   ├── app.component.ts
+│   │   ├── app.config.ts
+│   │   └── app.routes.ts
+│   │
+│   ├── assets/
+│   ├── environments/
+│   │   ├── environment.ts
+│   │   └── environment.prod.ts
+│   └── styles/
+│       ├── main.scss
+│       └── tailwind.css
+│
+├── angular.json
+├── tailwind.config.js
+├── tsconfig.json
+├── package.json
+└── README.md
+```
 
 ---
 
-### Core and Shared Layers
+## 🚀 Quick Start
 
-| Folder | Purpose | Typical Contents |
-|--------|---------|-----------------|
-| **`core/`** | Foundation layer containing globally used services, models, interceptors, and guards | `AuthService`, `AuthGuard`, `AuthInterceptor`, `User`, `JobOfferModel` |
-| **`shared/`** | Reusable UI components, directives, and pipes usable across modules | `ButtonComponent`, `LoaderComponent`, `DateFormatPipe` |
+### Prerequisites
 
----
+- Node.js 18+
+- npm 9+
+- Angular CLI 17+
 
-### Feature Modules (`modules/`)
-
-Each folder under `src/app/modules/` represents a major functional domain. Modules use **Lazy Loading** for performance.
-
-| Module | Purpose | Key Components |
-|--------|---------|----------------|
-| **`auth/`** | User authentication and access control | `LoginComponent`, `RegisterComponent`, `ResetPasswordComponent` |
-| **`dashboard/`** | Overview and main activity statistics | `DashboardComponent`, `StatsComponent` |
-| **`job-offer/`** | Full lifecycle of job offers | `JobOfferListComponent`, `JobOfferFormComponent`, `JobOfferDetailComponent` |
-| **`candidate/`** | Candidate profile management | `CandidateProfileComponent`, `CandidateCvComponent` |
-| **`application/`** | Application tracking and matching scores | `ApplicationListComponent`, `ApplicationDetailComponent` |
-
----
-
-## 🔗 Backend Integration
-
-The front-end communicates exclusively with the **`recruforce2-backend-core`** API.
-
-1. **API URL:** Defined in `src/environments/environment.ts`.  
-2. **Security (JWT):** `AuthInterceptor` (`core/interceptors/http-interceptor.ts`) attaches the JWT token to every HTTP request for secure communication.  
-3. **Services:** Services in `core/services/` (e.g., `auth.ts`, `user.ts`) encapsulate API call logic.  
-
----
-
-## ⚙️ Setup and Installation
-
-Clone the repository:
+### Installation
 
 ```bash
-git clone <your-repo-url>
+# 1. Clone repository
+git clone <repo-url>
 cd recruforce2-frontend
-````
 
-Install dependencies:
-
-```bash
+# 2. Install dependencies
 npm install
+
+# 3. Configure environment
+cp src/environments/environment.ts.example src/environments/environment.ts
+# Edit with your backend URL
+
+# 4. Run development server
+ng serve
+
+# Open http://localhost:4200
 ```
-
-Run the development server:
-
-```bash
-npm start
-```
-
-The app should now be running on: `http://localhost:4200`
 
 ---
 
-## 🌍 Environment Configuration
+## 🔧 Configuration
 
-Angular environments are stored in `src/environments/`:
+### Environment Variables
 
-| File                  | Purpose                           |
-| --------------------- | --------------------------------- |
-| `environment.ts`      | Development environment variables |
-| `environment.prod.ts` | Production environment variables  |
-
-**Example variables:**
-
-```ts
+**Development** (`src/environments/environment.ts`):
+```typescript
 export const environment = {
   production: false,
   apiUrl: 'http://localhost:8080/api',
-  jwtTokenKey: 'recruforce2-token'
+  aiServiceUrl: 'http://localhost:8000',
+  n8nWebhookUrl: 'http://localhost:5678/webhook'
+};
+```
+
+**Production** (`src/environments/environment.prod.ts`):
+```typescript
+export const environment = {
+  production: true,
+  apiUrl: 'https://api.recruforce2.com/api',
+  aiServiceUrl: 'https://ai.recruforce2.com',
+  n8nWebhookUrl: 'https://workflows.recruforce2.com/webhook'
 };
 ```
 
 ---
 
-## 🐳 Deployment & Docker
+## 📦 Key Technologies
 
-The front-end is containerized for efficient deployment.
+- **Angular 17** - Latest stable version
+- **TypeScript 5.2** - Strict mode
+- **Tailwind CSS 3** - Utility-first CSS
+- **RxJS 7** - Reactive programming
+- **Angular Signals** - Modern reactivity
+- **Standalone Components** - No NgModules
 
-### 1. Build Image
+---
 
-The `Dockerfile` uses a **Multi-Stage Build**:
+## 🎨 Design System
 
-* **Stage 1 (`build`)**: Node image to compile Angular app in production.
-* **Stage 2 (`final`)**: Lightweight Nginx Alpine image to serve static files.
+### Components
 
-### 2. Run
+- **Smart Components** (Container): Logic, state management
+- **Dumb Components** (Presentational): Pure, @Input/@Output only
 
-The compiled application is served by **Nginx** on port **80** inside the container.
+### Styling
 
-### 3. Docker Compose Integration
+- **Tailwind CSS** for utility classes
+- **SCSS** for custom styles
+- **Mobile-first** responsive design
+- **Consistent spacing** (Tailwind scale)
 
-The front-end service is included in the `docker-compose.yml` of the **`recruforce2-backend-core`** repository for full-stack execution.
+---
+
+## 🔐 Authentication & Authorization
+
+### Login Flow
+
+```typescript
+// User logs in
+this.authService.login(credentials)
+  .subscribe(response => {
+    // JWT stored in localStorage
+    // User redirected to dashboard
+  });
+```
+
+### Role-Based Access
+
+```typescript
+// Route protection
+{
+  path: 'candidates',
+  canActivate: [AuthGuard, RoleGuard],
+  data: { roles: ['RECRUITER', 'ADMIN'] }
+}
+```
+
+### HTTP Interceptors
+
+- **AuthInterceptor**: Adds JWT to requests
+- **ErrorInterceptor**: Handles API errors
+- **LoadingInterceptor**: Shows loading spinner
+
+---
+
+## 📊 State Management
+
+### Signals (Angular 17+)
+
+```typescript
+// Component
+export class CandidateListComponent {
+  candidates = signal<Candidate[]>([]);
+  loading = signal<boolean>(false);
+  
+  constructor(private candidateService: CandidateService) {
+    this.loadCandidates();
+  }
+  
+  loadCandidates() {
+    this.loading.set(true);
+    this.candidateService.getAll()
+      .subscribe(data => {
+        this.candidates.set(data);
+        this.loading.set(false);
+      });
+  }
+}
+```
+
+### Services (Singleton)
+
+```typescript
+@Injectable({ providedIn: 'root' })
+export class CandidateService {
+  private apiUrl = `${environment.apiUrl}/candidates`;
+  
+  getAll(): Observable<Candidate[]> {
+    return this.http.get<Candidate[]>(this.apiUrl);
+  }
+}
+```
+
+---
+
+## 🧩 Feature Modules
+
+### Auth Module
+
+- Login page
+- Register page
+- Password reset
+- JWT token management
+
+### Dashboard Module
+
+- Statistics cards
+- Recent applications
+- Upcoming interviews
+- Quick actions
+
+### Candidates Module
+
+- List all candidates
+- Candidate detail view
+- CV upload
+- Profile editing
+
+### Job Offers Module
+
+- Create job offer
+- List active jobs
+- Publish to LinkedIn
+- Archive jobs
+
+### Applications Module
+
+- View applications
+- Filter by score/status
+- Accept/Reject
+- Schedule interviews
+
+### Public Module
+
+- Job board (public)
+- Apply form with CV upload
+- Application tracking
+
+---
+
+## 🎯 Routing Strategy
+
+```typescript
+// app.routes.ts
+export const routes: Routes = [
+  { path: '', redirectTo: '/jobs', pathMatch: 'full' },
+  
+  // Public routes
+  {
+    path: 'jobs',
+    loadComponent: () => import('./features/public/job-board/job-board.component')
+  },
+  {
+    path: 'jobs/:id/apply',
+    loadComponent: () => import('./features/public/apply/apply.component')
+  },
+  
+  // Auth routes
+  {
+    path: 'login',
+    loadComponent: () => import('./features/auth/login/login.component')
+  },
+  
+  // Protected routes
+  {
+    path: 'dashboard',
+    canActivate: [AuthGuard],
+    loadComponent: () => import('./features/dashboard/dashboard.component')
+  },
+  {
+    path: 'candidates',
+    canActivate: [AuthGuard, RoleGuard],
+    data: { roles: ['RECRUITER', 'ADMIN'] },
+    loadChildren: () => import('./features/candidates/candidates.routes')
+  }
+];
+```
+
+---
+
+## 🧪 Testing
 
 ```bash
-# Example of local execution (outside Docker Compose)
-npm start
+# Unit tests
+ng test
+
+# E2E tests
+ng e2e
+
+# Coverage
+ng test --code-coverage
 ```
 
 ---
 
-## 📂 Folder Structure Details
+## 📦 Build & Deploy
 
+### Development Build
+
+```bash
+ng build
 ```
-src/
-├── app/
-│   ├── core/
-│   │   ├── services/        # API call logic
-│   │   ├── interceptors/    # HTTP interceptors
-│   │   └── guards/          # Route guards
-│   ├── shared/
-│   │   ├── components/      # Reusable UI components
-│   │   ├── directives/      # Shared directives
-│   │   └── pipes/           # Shared pipes
-│   └── modules/
-│       ├── auth/            # Login/Register/ResetPassword
-│       ├── dashboard/       # Dashboard and Stats
-│       ├── job-offer/       # JobOffer CRUD
-│       ├── candidate/       # Candidate Profile/CV
-│       └── application/     # Application tracking
-└── environments/
+
+### Production Build
+
+```bash
+ng build --configuration production
+
+# Output: dist/recruforce2-frontend/
+```
+
+### Deploy to Netlify
+
+```bash
+# Install Netlify CLI
+npm install -g netlify-cli
+
+# Deploy
+netlify deploy --prod --dir=dist/recruforce2-frontend/browser
 ```
 
 ---
 
-## 🔧 Best Practices
+## 🔍 Best Practices
 
-* Use **Lazy Loading** for all feature modules to improve performance.
-* Keep **Core services singleton** and avoid importing them in feature modules.
-* Keep **Shared components** free of business logic; only UI related code.
-* Use **Strong typing** for API responses and models.
+### ✅ DO
 
----
+- Use standalone components
+- Implement OnPush change detection
+- Use async pipe for observables
+- Lazy load feature modules
+- Use TypeScript strict mode
+- Follow Angular style guide
+- Use Signals for reactive state
 
-## 📖 References
+### ❌ DON'T
 
-* [Angular Official Documentation](https://angular.io/docs)
-* [Angular CLI](https://angular.io/cli)
-* [RecruForce 2 Backend API](backend-repo-link)
-
+- Subscribe without unsubscribing
+- Use any type
+- Mutate state directly
+- Put logic in templates
+- Create circular dependencies
