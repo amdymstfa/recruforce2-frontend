@@ -1,1 +1,9 @@
-<p>stats works!</p>
+<div class="stats-row">
+  <div *ngFor="let stat of stats" class="stat-item">
+    <span class="stat-label">{{ stat.label }}</span>
+    <span class="stat-value">{{ stat.value }}</span>
+    <span *ngIf="stat.delta !== undefined" class="stat-delta" [class.positive]="stat.delta >= 0">
+          {{ stat.delta >= 0 ? '+' : '' }}{{ stat.delta }}%
+        </span>
+  </div>
+</div>

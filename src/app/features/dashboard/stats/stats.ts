@@ -1,11 +1,20 @@
-import { Component } from '@angular/core';
+import { Component, Input } from '@angular/core';
+import { CommonModule } from '@angular/common';
+
+export interface StatItem {
+  label: string;
+  value: number;
+  delta?: number;
+  color?: string;
+}
 
 @Component({
   selector: 'app-stats',
-  imports: [],
-  templateUrl: './stats.html',
-  styleUrl: './stats.scss',
+  standalone: true,
+  imports: [CommonModule],
+  template: `./stats.html`,
+  styleUrl: './stats.scss'
 })
-export class Stats {
-
+export class StatsComponent {
+  @Input() stats: StatItem[] = [];
 }
