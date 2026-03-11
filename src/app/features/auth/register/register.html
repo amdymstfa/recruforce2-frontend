@@ -1,1 +1,50 @@
-<p>register works!</p>
+<div class="auth-page">
+  <div class="auth-card">
+    <div class="auth-header">
+      <span class="brand-icon">⬡</span>
+      <h1>Créer un compte</h1>
+      <p>Remplissez le formulaire pour rejoindre RecruForce²</p>
+    </div>
+
+    <form [formGroup]="registerForm" (ngSubmit)="onSubmit()" novalidate>
+      <div class="fields-row">
+        <div class="field-group">
+          <label>Prénom</label>
+          <input type="text" formControlName="firstName" placeholder="Marie" [class.invalid]="registerForm.get('firstName')?.invalid && registerForm.get('firstName')?.touched">
+          <span class="field-error" *ngIf="registerForm.get('firstName')?.invalid && registerForm.get('firstName')?.touched">Requis</span>
+        </div>
+        <div class="field-group">
+          <label>Nom</label>
+          <input type="text" formControlName="lastName" placeholder="Dupont" [class.invalid]="registerForm.get('lastName')?.invalid && registerForm.get('lastName')?.touched">
+          <span class="field-error" *ngIf="registerForm.get('lastName')?.invalid && registerForm.get('lastName')?.touched">Requis</span>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <label>Email</label>
+        <input type="email" formControlName="email" placeholder="marie@example.com">
+        <span class="field-error" *ngIf="registerForm.get('email')?.invalid && registerForm.get('email')?.touched">Email invalide</span>
+      </div>
+
+      <div class="field-group">
+        <label>Mot de passe</label>
+        <input type="password" formControlName="password" placeholder="Min. 8 caractères">
+        <span class="field-error" *ngIf="registerForm.get('password')?.invalid && registerForm.get('password')?.touched">8 caractères minimum</span>
+      </div>
+
+      <div class="field-group">
+        <label>Confirmer le mot de passe</label>
+        <input type="password" formControlName="confirmPassword" placeholder="Répétez le mot de passe">
+        <span class="field-error" *ngIf="registerForm.get('confirmPassword')?.errors?.['mismatch']">Les mots de passe ne correspondent pas</span>
+      </div>
+
+      <div class="error-alert" *ngIf="error()">{{ error() }}</div>
+
+      <button type="submit" class="submit-btn" [disabled]="loading()">
+        {{ loading() ? 'Création…' : 'Créer mon compte' }}
+      </button>
+    </form>
+
+    <p class="form-footer">Déjà inscrit ? <a routerLink="/auth/login">Se connecter</a></p>
+  </div>
+</div>

@@ -1,0 +1,52 @@
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500&display=swap');
+
+:host { display: block; min-height: 100vh; font-family: 'DM Sans', sans-serif; }
+
+.auth-page {
+  min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+  padding: 2rem;
+}
+
+.auth-card {
+  background: white; border-radius: 20px; padding: 2.5rem;
+  width: 100%; max-width: 480px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+}
+
+.auth-header {
+  text-align: center; margin-bottom: 2rem;
+  .brand-icon { font-size: 2rem; color: #6366f1; filter: drop-shadow(0 0 8px rgba(99,102,241,0.5)); }
+  h1 { font-family: 'Syne', sans-serif; font-size: 1.6rem; font-weight: 800; color: #0f172a; margin: 0.5rem 0 0.25rem; }
+  p { font-size: 0.875rem; color: #64748b; margin: 0; }
+}
+
+.fields-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+
+.field-group {
+  margin-bottom: 1rem;
+  label { display: block; font-size: 0.8rem; font-weight: 500; color: #374151; margin-bottom: 0.4rem; }
+  input {
+    width: 100%; padding: 0.65rem 0.875rem; border: 1.5px solid #e2e8f0; border-radius: 9px;
+    font-family: 'DM Sans', sans-serif; font-size: 0.875rem; color: #1e293b; background: #f8fafc;
+    outline: none; box-sizing: border-box; transition: border-color 0.2s;
+    &:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.1); background: white; }
+    &.invalid { border-color: #ef4444; }
+    &::placeholder { color: #cbd5e1; }
+  }
+}
+
+.field-error { font-size: 0.76rem; color: #ef4444; margin-top: 0.3rem; display: block; }
+.error-alert { background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 0.7rem 1rem; font-size: 0.85rem; color: #dc2626; margin-bottom: 1rem; }
+
+.submit-btn {
+  width: 100%; padding: 0.85rem; background: linear-gradient(135deg, #6366f1, #4f46e5);
+  color: white; border: none; border-radius: 10px; font-family: 'Syne', sans-serif;
+  font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: all 0.2s;
+  &:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(99,102,241,0.4); }
+  &:disabled { opacity: 0.7; cursor: not-allowed; }
+}
+
+.form-footer { text-align: center; margin-top: 1.5rem; font-size: 0.85rem; color: #64748b;
+  a { color: #6366f1; text-decoration: none; font-weight: 500; &:hover { text-decoration: underline; } }
+}
