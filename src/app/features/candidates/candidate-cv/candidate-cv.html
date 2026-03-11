@@ -1,1 +1,66 @@
-<p>candidate-cv works!</p>
+<div class="cv-container">
+  <div class="cv-topbar">
+    <a [routerLink]="['/candidates', candidateId()]" class="back-btn">← Retour au profil</a>
+    <h1>CV Parsé par IA</h1>
+  </div>
+
+  <div *ngIf="loading()" class="skeleton-cv">
+    <div class="sk sk-lg"></div>
+    <div class="sk sk-md"></div>
+    <div class="sk sk-sm"></div>
+    <div class="sk sk-lg"></div>
+  </div>
+
+  <div *ngIf="!loading() && parsedCv()" class="cv-card">
+    <!-- Header -->
+    <div class="cv-header">
+      <div class="cv-avatar">{{ parsedCv().name?.charAt(0) ?? '?' }}</div>
+      <div>
+        <h2>{{ parsedCv().name }}</h2>
+        <div class="cv-contact">
+          <span>{{ parsedCv().email }}</span>
+          <span *ngIf="parsedCv().phone">{{ parsedCv().phone }}</span>
+        </div>
+      </div>
+    </div>
+
+    <p class="cv-summary" *ngIf="parsedCv().summary">{{ parsedCv().summary }}</p>
+
+    <!-- Skills -->
+    <div class="cv-section" *ngIf="parsedCv().skills?.length">
+      <h3>Compétences</h3>
+      <div class="skills-list">
+        <span *ngFor="let s of parsedCv().skills" class="skill-chip">{{ s }}</span>
+      </div>
+    </div>
+
+    <!-- Experiences -->
+    <div class="cv-section" *ngIf="parsedCv().experiences?.length">
+      <h3>Expériences</h3>
+      <div *ngFor="let exp of parsedCv().experiences" class="exp-item">
+        <div class="exp-header">
+          <strong>{{ exp.title }}</strong>
+          <span class="exp-company">{{ exp.company }}</span>
+          <span class="exp-duration">{{ exp.duration }}</span>
+        </div>
+        <p *ngIf="exp.description">{{ exp.description }}</p>
+      </div>
+    </div>
+
+    <!-- Education -->
+    <div class="cv-section" *ngIf="parsedCv().education?.length">
+      <h3>Formation</h3>
+      <div *ngFor="let edu of parsedCv().education" class="exp-item">
+        <strong>{{ edu.degree }}</strong> — {{ edu.institution }} ({{ edu.year }})
+      </div>
+    </div>
+
+    <!-- Languages -->
+    <div class="cv-section" *ngIf="parsedCv().languages?.length">
+      <h3>Langues</h3>
+      <div class="skills-list">
+        <span *ngFor="let lang of parsedCv().languages" class="lang-chip">{{ lang }}</span>
+      </div>
+    </div>
+  </div>
+</div>
