@@ -1,0 +1,25 @@
+:host { display: block; }
+
+.loader-wrap {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.75rem;
+  &.overlay { position: fixed; inset: 0; background: rgba(255,255,255,0.85); z-index: 9999; backdrop-filter: blur(4px); }
+}
+
+.loader {
+  position: relative; border-radius: 50%;
+  &--sm  { width: 28px; height: 28px; }
+  &--md  { width: 44px; height: 44px; }
+  &--lg  { width: 64px; height: 64px; }
+}
+
+.ring {
+  position: absolute; inset: 0; border-radius: 50%;
+  border: 2.5px solid transparent;
+  border-top-color: #6366f1;
+  animation: spin 0.7s linear infinite;
+  &--2 { border-top-color: transparent; border-right-color: rgba(99,102,241,0.3); animation-duration: 1.2s; animation-direction: reverse; }
+}
+
+.loader-msg { font-family: 'DM Sans', sans-serif; font-size: 0.85rem; color: #64748b; margin: 0; }
+
+@keyframes spin { to { transform: rotate(360deg); } }

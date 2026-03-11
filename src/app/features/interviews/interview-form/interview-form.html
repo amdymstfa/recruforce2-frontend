@@ -1,0 +1,42 @@
+<div class="page-container">
+  <div class="page-header">
+    <button class="back-btn" routerLink="/interviews">← Retour</button>
+    <h1>{{ editMode() ? 'Modifier l\'entretien' : 'Planifier un entretien' }}</h1>
+  </div>
+
+  <form [formGroup]="form" (ngSubmit)="onSubmit()" class="form-card" novalidate>
+    <div class="fields-grid">
+      <div class="field-group col-full">
+        <label>ID Candidat *</label>
+        <input type="number" formControlName="candidateId" placeholder="ID du candidat">
+        <span class="field-error" *ngIf="form.get('candidateId')?.invalid && form.get('candidateId')?.touched">Requis</span>
+      </div>
+      <div class="field-group">
+        <label>Date & Heure *</label>
+        <input type="datetime-local" formControlName="scheduledAt">
+        <span class="field-error" *ngIf="form.get('scheduledAt')?.invalid && form.get('scheduledAt')?.touched">Requis</span>
+      </div>
+      <div class="field-group">
+        <label>Type *</label>
+        <select formControlName="type">
+          <option *ngFor="let t of types" [value]="t">{{ t }}</option>
+        </select>
+      </div>
+      <div class="field-group col-full">
+        <label>Lieu / Lien</label>
+        <input type="text" formControlName="location" placeholder="Google Meet, Salle A, …">
+      </div>
+      <div class="field-group col-full">
+        <label>Notes préparatoires</label>
+        <textarea formControlName="notes" rows="4" placeholder="Points à aborder…"></textarea>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button type="button" class="btn-outline" routerLink="/interviews">Annuler</button>
+      <button type="submit" class="btn-primary" [disabled]="saving()">
+        {{ saving() ? 'Sauvegarde…' : (editMode() ? 'Mettre à jour' : 'Planifier') }}
+      </button>
+    </div>
+  </form>
+</div>

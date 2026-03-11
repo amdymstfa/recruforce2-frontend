@@ -1,1 +1,7 @@
-<p>loader works!</p>
+<div class="loader-wrap" [class.overlay]="overlay">
+  <div class="loader loader--{{ size }}">
+    <div class="ring"></div>
+    <div class="ring ring--2"></div>
+  </div>
+  <p *ngIf="message" class="loader-msg">{{ message }}</p>
+</div>
