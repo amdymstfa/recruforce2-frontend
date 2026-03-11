@@ -1,1 +1,86 @@
-<p>job-offer-form works!</p>
+<div class="page-container">
+  <div class="page-header">
+    <button class="back-btn" routerLink="/job-offers">
+      <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9.707 14.707a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 1.414L7.414 9H15a1 1 0 110 2H7.414l2.293 2.293a1 1 0 010 1.414z" clip-rule="evenodd"/></svg>
+      Retour
+    </button>
+    <h1>{{ editMode() ? 'Modifier l\'offre' : 'Nouvelle offre d\'emploi' }}</h1>
+  </div>
+
+  <div *ngIf="loading()" class="skeleton-form">
+    <div class="skeleton-block h60"></div>
+    <div class="skeleton-block h40"></div>
+    <div class="skeleton-block h120"></div>
+  </div>
+
+  <form *ngIf="!loading()" [formGroup]="offerForm" (ngSubmit)="onSubmit()" class="form-card" novalidate>
+
+    <div class="form-section">
+      <h2>Informations générales</h2>
+      <div class="fields-grid">
+        <div class="field-group col-full">
+          <label>Titre du poste *</label>
+          <input type="text" formControlName="title" placeholder="Ex: Développeur Full-Stack Angular/Spring">
+          <span class="field-error" *ngIf="offerForm.get('title')?.invalid && offerForm.get('title')?.touched">Titre requis (3 caractères min.)</span>
+        </div>
+        <div class="field-group">
+          <label>Département *</label>
+          <select formControlName="department">
+            <option value="">Choisir…</option>
+            <option *ngFor="let d of departments" [value]="d">{{ d }}</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label>Type de contrat *</label>
+          <select formControlName="contractType">
+            <option *ngFor="let c of contractTypes" [value]="c">{{ c }}</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label>Localisation</label>
+          <input type="text" formControlName="location" placeholder="Paris, France (ou Remote)">
+        </div>
+        <div class="field-group">
+          <label>Salaire</label>
+          <input type="text" formControlName="salary" placeholder="45k–55k€ / an">
+        </div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <h2>Description</h2>
+      <div class="field-group">
+        <label>Description du poste *</label>
+        <textarea formControlName="description" rows="6" placeholder="Décrivez le rôle, les responsabilités et le contexte…"></textarea>
+        <span class="field-error" *ngIf="offerForm.get('description')?.invalid && offerForm.get('description')?.touched">Description requise (20 caractères min.)</span>
+      </div>
+      <div class="field-group">
+        <label>Prérequis</label>
+        <textarea formControlName="requirements" rows="4" placeholder="Listez les compétences et qualifications requises…"></textarea>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <h2>Publication</h2>
+      <div class="status-options">
+        <label class="radio-card" [class.selected]="offerForm.get('status')?.value === 'DRAFT'">
+          <input type="radio" formControlName="status" value="DRAFT"> Brouillon
+          <small>Sauvegarder sans publier</small>
+        </label>
+        <label class="radio-card" [class.selected]="offerForm.get('status')?.value === 'PUBLISHED'">
+          <input type="radio" formControlName="status" value="PUBLISHED"> Publier
+          <small>Publier et déclencher N8N → LinkedIn</small>
+        </label>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button type="button" class="btn-outline" routerLink="/job-offers">Annuler</button>
+      <button type="submit" class="btn-primary" [disabled]="saving()">
+        <svg *ngIf="saving()" class="spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83"/></svg>
+        {{ saving() ? 'Sauvegarde…' : (editMode() ? 'Mettre à jour' : 'Créer l\'offre') }}
+      </button>
+    </div>
+
+  </form>
+</div>
