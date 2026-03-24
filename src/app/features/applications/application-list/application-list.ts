@@ -1,112 +1,112 @@
-import { Component, OnInit, signal, computed, inject } from '@angular/core';
+import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../../core/services/api.service';
-import { Application } from '../../../core/models';
-
-type StatusFilter = 'ALL' | 'PENDING' | 'IN_REVIEW' | 'ACCEPTED' | 'REJECTED';
+import { AuthService } from '../../../core/services/auth';
+import { Application, ApplicationPage, JobOffer, JobOfferPage } from '../../../core/models';
 
 @Component({
   selector: 'app-application-list',
   standalone: true,
   imports: [CommonModule, RouterModule, FormsModule],
   templateUrl: './application-list.html',
-  styleUrls: ['./application-list.scss']
+  styleUrl: './application-list.scss'
 })
 export class ApplicationListComponent implements OnInit {
   private api = inject(ApiService);
+  private authService = inject(AuthService);
 
   applications = signal<Application[]>([]);
+  jobOffers = signal<JobOffer[]>([]);
   loading = signal(true);
-  activeFilter = signal<StatusFilter>('ALL');
-  searchQuery = signal('');
-  currentPage = signal(0);
-  pageSize = 10;
+  selectedJobOffer = signal<number>(1);
+  filterStatus = signal('all');
   totalElements = signal(0);
+  currentPage = signal(0);
+  totalPages = signal(0);
+  pageSize = 10;
 
-  statusFilters: { value: StatusFilter; label: string }[] = [
-    { value: 'ALL', label: 'Tout' },
-    { value: 'PENDING', label: 'En attente' },
-    { value: 'IN_REVIEW', label: 'En cours' },
-    { value: 'ACCEPTED', label: 'Accepté' },
-    { value: 'REJECTED', label: 'Refusé' },
+  statusOptions = [
+    { value: 'all',        label: 'Tous'       },
+    { value: 'RECEIVED',   label: 'Reçues'     },
+    { value: 'IN_PROCESS', label: 'En cours'   },
+    { value: 'ACCEPTED',   label: 'Acceptées'  },
+    { value: 'REJECTED',   label: 'Refusées'   },
   ];
 
-  filteredApplications = computed(() => {
-    let result = this.applications();
-    const filter = this.activeFilter();
-    const query = this.searchQuery().toLowerCase();
-
-    if (filter !== 'ALL') {
-      result = result.filter(a => a.status === filter);
-    }
-    if (query) {
-      result = result.filter(a =>
-        a.candidateName?.toLowerCase().includes(query) ||
-        a.jobTitle?.toLowerCase().includes(query)
-      );
-    }
-    return result;
-  });
-
   ngOnInit(): void {
-    this.loadApplications();
-  }
-
-  loadApplications(): void {
-    this.loading.set(true);
-    this.api.get<any>(`applications?page=${this.currentPage()}&size=${this.pageSize}&sort=appliedAt,desc`)
-      .subscribe({
-        next: (data) => {
-          const list = data?.content ?? data ?? [];
-          this.applications.set(list);
-          this.totalElements.set(data?.totalElements ?? list.length);
-          this.loading.set(false);
-        },
-        error: () => {
-          // Fallback mock data
-          this.applications.set([
-            { id: 1, candidateName: 'Marie Dupont', jobTitle: 'Développeur Full-Stack', status: 'PENDING', matchingScore: 87, appliedAt: '2026-03-09' } as any,
-            { id: 2, candidateName: 'Ahmed Benali', jobTitle: 'Data Engineer', status: 'ACCEPTED', matchingScore: 92, appliedAt: '2026-03-08' } as any,
-            { id: 3, candidateName: 'Lucas Martin', jobTitle: 'UX Designer', status: 'IN_REVIEW', matchingScore: 74, appliedAt: '2026-03-08' } as any,
-            { id: 4, candidateName: 'Sofia Ribeiro', jobTitle: 'DevOps Engineer', status: 'REJECTED', matchingScore: 51, appliedAt: '2026-03-07' } as any,
-            { id: 5, candidateName: 'Karim Fassi', jobTitle: 'Backend Java', status: 'PENDING', matchingScore: 81, appliedAt: '2026-03-07' } as any,
-          ]);
-          this.loading.set(false);
+    this.api.get<JobOfferPage>('job-offers', { page: 0, size: 50 }).subscribe({
+      next: (data) => {
+        this.jobOffers.set(data.content);
+        if (data.content.length > 0) {
+          this.selectedJobOffer.set(data.content[0].id);
+          this.load();
         }
-      });
+      }
+    });
   }
 
-  setFilter(filter: StatusFilter): void {
-    this.activeFilter.set(filter);
-    this.currentPage.set(0);
+  load(): void {
+    this.loading.set(true);
+    this.api.get<ApplicationPage>(
+      `applications/job-offer/${this.selectedJobOffer()}`,
+      { page: this.currentPage(), size: this.pageSize }
+    ).subscribe({
+      next: (data) => {
+        let content = data.content;
+        if (this.filterStatus() !== 'all') {
+          content = content.filter(a => a.status === this.filterStatus());
+        }
+        this.applications.set(content);
+        this.totalElements.set(data.totalElements);
+        this.totalPages.set(data.totalPages);
+        this.loading.set(false);
+      },
+      error: () => this.loading.set(false)
+    });
   }
 
-  setSearch(query: string): void {
-    this.searchQuery.set(query);
-    this.currentPage.set(0);
+  changeOffer(id: number): void { this.selectedJobOffer.set(id); this.currentPage.set(0); this.load(); }
+  applyFilter(status: string): void { this.filterStatus.set(status); this.currentPage.set(0); this.load(); }
+  goTo(page: number): void { this.currentPage.set(page); this.load(); }
+  pages(): number[] { return Array.from({ length: this.totalPages() }, (_, i) => i); }
+
+  canChangeStatus(): boolean {
+    const role = this.authService.currentUser()?.role;
+    return role === 'ADMIN' || role === 'RECRUITER';
   }
 
-  nextPage(): void { this.currentPage.update(p => p + 1); this.loadApplications(); }
-  prevPage(): void { this.currentPage.update(p => Math.max(0, p - 1)); this.loadApplications(); }
+  getStatusColor(status: string): string {
+    const map: Record<string, string> = {
+      RECEIVED: 'gray', IN_PROCESS: 'blue', PENDING: 'amber',
+      ACCEPTED: 'jade', REJECTED: 'rose', HIRED: 'purple'
+    };
+    return map[status] ?? 'gray';
+  }
 
   getStatusLabel(status: string): string {
     const map: Record<string, string> = {
-      PENDING: 'En attente', ACCEPTED: 'Accepté', REJECTED: 'Refusé', IN_REVIEW: 'En cours'
+      RECEIVED: 'Reçue', IN_PROCESS: 'En cours', PENDING: 'En attente',
+      ACCEPTED: 'Acceptée', REJECTED: 'Refusée', HIRED: 'Embauché'
     };
     return map[status] ?? status;
   }
 
-  getScoreColor(score?: number) {
-
-    if (!score) return 'low';
-
-    if (score >= 80) return 'high';
-    if (score >= 50) return 'medium';
-    return 'low';
-
+  getScoreColor(score: number): string {
+    if (score >= 80) return 'jade';
+    if (score >= 60) return 'amber';
+    return 'rose';
   }
 
-  trackById(_: number, item: Application): number { return item.id; }
+  getInitials(name: string): string {
+    return name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) ?? '??';
+  }
+
+  changeStatus(id: number, status: string, event: Event): void {
+    event.preventDefault(); event.stopPropagation();
+    this.api.patch<void>(`applications/${id}/status`, null, { params: { status } }).subscribe({
+      next: () => this.load()
+    });
+  }
 }

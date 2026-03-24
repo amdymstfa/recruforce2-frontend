@@ -1,69 +1,168 @@
-<div class="page-container">
+<div class="page">
   <div class="page-header">
     <div>
-      <h1>Entretiens</h1>
-      <p class="subtitle">{{ filteredInterviews().length }} entretien(s)</p>
+      <div class="page-tag">Recrutement</div>
+      <h1 class="page-title">Entretiens</h1>
+      <p class="page-sub">{{ filtered().length }} entretien(s)</p>
     </div>
-    <a routerLink="/interviews/new" class="btn-primary">
-      <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/></svg>
-      Planifier un entretien
-    </a>
+    @if (canSchedule()) {
+      <button class="btn-primary" (click)="openModal()">+ Planifier entretien</button>
+    }
   </div>
 
-  <div class="controls">
-    <div class="filter-tabs">
-      <button *ngFor="let f of statusFilters" class="filter-tab" [class.active]="activeFilter() === f.value" (click)="setFilter(f.value)">
-        {{ f.label }}
+  <div class="filter-tabs">
+    @for (opt of statusOptions; track opt.value) {
+      <button class="filter-tab" [class.active]="filterStatus() === opt.value" (click)="filterStatus.set(opt.value)">
+        {{ opt.label }}
       </button>
-    </div>
-    <div class="search-box">
-      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="6"/><path d="M15 15l3 3"/></svg>
-      <input type="text" placeholder="Rechercher…" [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event)" />
-    </div>
+    }
   </div>
 
-  <div *ngIf="loading()" class="skeleton-table">
-    <div *ngFor="let i of [1,2,3,4]" class="skeleton-row"></div>
-  </div>
-
-  <div *ngIf="!loading()" class="table-card">
-    <table class="data-table" *ngIf="filteredInterviews().length > 0">
-      <thead>
-      <tr>
-        <th>Candidat</th>
-        <th>Poste</th>
-        <th>Type</th>
-        <th>Date & Heure</th>
-        <th>Statut</th>
-        <th>Actions</th>
-      </tr>
-      </thead>
-      <tbody>
-      <tr *ngFor="let iv of filteredInterviews(); trackBy: trackById">
-        <td>
-          <div class="candidate-cell">
-            <div class="avatar">{{ (iv.candidateName ?? '?').charAt(0) }}</div>
-            {{ iv.candidateName }}
+  @if (loading()) {
+    <div class="skeleton-list">
+      @for (i of [1,2,3,4]; track i) { <div class="skeleton-row"></div> }
+    </div>
+  } @else if (filtered().length === 0) {
+    <div class="empty-state">
+      <div class="empty-icon">📅</div>
+      <p>Aucun entretien trouvé</p>
+      @if (canSchedule()) {
+        <button class="btn-primary" (click)="openModal()">Planifier un entretien</button>
+      }
+    </div>
+  } @else {
+    <div class="interviews-list">
+      @for (interview of filtered(); track interview.id) {
+        <a [routerLink]="['/interviews', interview.id]" class="interview-card">
+          <div class="interview-date">
+            <div class="date-day">{{ interview.dateTime | date:'dd' }}</div>
+            <div class="date-month">{{ interview.dateTime | date:'MMM' }}</div>
+            <div class="date-time">{{ interview.dateTime | date:'HH:mm' }}</div>
           </div>
-        </td>
-        <td class="muted">{{ iv.jobTitle }}</td>
-        <td><span class="type-badge">{{ getTypeLabel(iv.type) }}</span></td>
-        <td class="muted">{{ iv.scheduledAt | date:'dd/MM/yyyy HH:mm' }}</td>
-        <td>
-            <span class="status-chip status-chip--{{ iv.status.toLowerCase() }}">
-              {{ getStatusLabel(iv.status) }}
-            </span>
-        </td>
-        <td>
-          <a [routerLink]="['/interviews', iv.id]" class="action-link">Voir →</a>
-        </td>
-      </tr>
-      </tbody>
-    </table>
+          <div class="interview-info">
+            <div class="interview-candidate">
+              <div class="avatar">{{ getInitials(interview.candidateName) }}</div>
+              <div>
+                <div class="candidate-name">{{ interview.candidateName }}</div>
+                <div class="candidate-email">{{ interview.candidateEmail }}</div>
+              </div>
+            </div>
+            <div class="interview-badges">
+              <span class="type-badge type-badge--{{ getTypeColor(interview.type) }}">{{ getTypeLabel(interview.type) }}</span>
+              <span class="status-badge status-badge--{{ getStatusColor(interview.status) }}">{{ getStatusLabel(interview.status) }}</span>
+            </div>
+          </div>
+          <div class="interview-meta">
+            <div class="meta-row"><span class="meta-label">Intervieweur</span><span class="meta-value">{{ interview.interviewerName }}</span></div>
+            <div class="meta-row"><span class="meta-label">Durée</span><span class="meta-value">{{ interview.durationMinutes }} min</span></div>
+            @if (interview.videoLink) {
+              <a [href]="interview.videoLink" target="_blank" class="video-link" (click)="$event.stopPropagation()">🎥 Rejoindre</a>
+            } @else {
+              <span class="location">📍 {{ interview.location }}</span>
+            }
+          </div>
+          @if (isUpcoming(interview.dateTime)) {
+            <div class="upcoming-badge">À venir</div>
+          }
+        </a>
+      }
+    </div>
+  }
+</div>
 
-    <div *ngIf="filteredInterviews().length === 0" class="empty-state">
-      <p>Aucun entretien trouvé.</p>
-      <a routerLink="/interviews/new" class="btn-primary">Planifier un entretien</a>
+<!-- Modal Planifier Entretien -->
+@if (showModal()) {
+  <div class="modal-overlay" (click)="closeModal()">
+    <div class="modal-container" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2 class="modal-title">Planifier un entretien</h2>
+        <p class="modal-sub">Soft Skills → Recruteur &nbsp;·&nbsp; Hard Skills → Manager</p>
+        <button class="modal-close" (click)="closeModal()">✕</button>
+      </div>
+
+      @if (modalError()) {
+        <div class="alert alert--error">✕ {{ modalError() }}</div>
+      }
+
+      <form [formGroup]="form" (ngSubmit)="submit()" class="modal-form">
+
+        <!-- Type -->
+        <div class="field">
+          <label class="field-label">Type d'entretien *</label>
+          <div class="type-selector">
+            @for (t of types; track t.value) {
+              <div class="type-option" [class.selected]="selectedType() === t.value"
+                   (click)="onTypeChange(t.value)">
+                <span class="type-icon">{{ t.value === 'SOFT_SKILLS' ? '🗣️' : '💻' }}</span>
+                <span class="type-label">{{ t.label }}</span>
+                <span class="type-sub">{{ t.sub }}</span>
+              </div>
+            }
+          </div>
+        </div>
+
+        <!-- Candidature -->
+        <div class="field">
+          <label class="field-label">Candidature *</label>
+          @if (applications().length === 0) {
+            <div class="field-hint">⚠ Aucune candidature qualifiée disponible.</div>
+          } @else {
+            <select formControlName="applicationId" class="field-input">
+              <option value="">Sélectionner une candidature</option>
+              @for (app of applications(); track app.id) {
+                <option [value]="app.id">{{ app.candidateName }} — {{ app.jobOfferTitle }} ({{ app.matchingScore }}%)</option>
+              }
+            </select>
+          }
+        </div>
+
+        <!-- Intervieweur -->
+        <div class="field">
+          <label class="field-label">{{ selectedType() === 'SOFT_SKILLS' ? 'Recruteur *' : 'Manager *' }}</label>
+          @if (filteredInterviewers().length === 0) {
+            <div class="field-hint">⚠ Aucun {{ selectedType() === 'SOFT_SKILLS' ? 'recruteur' : 'manager' }} disponible.</div>
+          } @else {
+            <select formControlName="interviewerId" class="field-input">
+              <option value="">Sélectionner un intervieweur</option>
+              @for (u of filteredInterviewers(); track u.id) {
+                <option [value]="u.id">{{ u.firstName }} {{ u.lastName }}</option>
+              }
+            </select>
+          }
+        </div>
+
+        <!-- Date + Durée -->
+        <div class="field-row">
+          <div class="field">
+            <label class="field-label">Date et heure *</label>
+            <input formControlName="dateTime" type="datetime-local" class="field-input" />
+          </div>
+          <div class="field">
+            <label class="field-label">Durée (min) *</label>
+            <input formControlName="durationMinutes" type="number" class="field-input" min="15" step="15" />
+          </div>
+        </div>
+
+        <!-- Lieu / Visio -->
+        <div class="field-row">
+          <div class="field">
+            <label class="field-label">Lieu</label>
+            <input formControlName="location" type="text" class="field-input" placeholder="Bureau Paris" />
+          </div>
+          <div class="field">
+            <label class="field-label">Lien visio</label>
+            <input formControlName="videoLink" type="url" class="field-input" placeholder="https://meet.google.com/..." />
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn-ghost" (click)="closeModal()">Annuler</button>
+          <button type="submit" class="btn-primary"
+            [disabled]="form.invalid || modalLoading() || filteredInterviewers().length === 0">
+            {{ modalLoading() ? 'Planification...' : 'Planifier' }}
+          </button>
+        </div>
+      </form>
     </div>
   </div>
-</div>
+}

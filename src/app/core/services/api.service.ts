@@ -8,7 +8,7 @@ export class ApiService {
   private http = inject(HttpClient);
   private baseUrl = environment.apiUrl ?? 'http://localhost:8080/api';
 
-  get<T>(endpoint: string, params?: Record<string, string | number>): Observable<T> {
+  get<T>(endpoint: string, params?: Record<string, any>): Observable<T> {
     let httpParams = new HttpParams();
     if (params) {
       Object.entries(params).forEach(([k, v]) => httpParams = httpParams.set(k, String(v)));
@@ -24,8 +24,12 @@ export class ApiService {
     return this.http.put<T>(`${this.baseUrl}/${endpoint}`, body);
   }
 
-  patch<T>(endpoint: string, body: any): Observable<T> {
-    return this.http.patch<T>(`${this.baseUrl}/${endpoint}`, body);
+  patch<T>(endpoint: string, body: any, options?: { params?: Record<string, any> }): Observable<T> {
+    let httpParams = new HttpParams();
+    if (options?.params) {
+      Object.entries(options.params).forEach(([k, v]) => httpParams = httpParams.set(k, String(v)));
+    }
+    return this.http.patch<T>(`${this.baseUrl}/${endpoint}`, body, { params: httpParams });
   }
 
   delete<T>(endpoint: string): Observable<T> {

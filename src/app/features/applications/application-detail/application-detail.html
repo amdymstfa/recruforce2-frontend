@@ -1,72 +1,85 @@
-<div class="page-container">
-  <button class="back-btn" routerLink="/applications">
-    <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9.707 14.707a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 1.414L7.414 9H15a1 1 0 110 2H7.414l2.293 2.293a1 1 0 010 1.414z" clip-rule="evenodd"/></svg>
-    Retour aux candidatures
-  </button>
+<div class="page">
+  @if (loading()) {
+    <div class="loading-state"><div class="spinner"></div></div>
+  } @else if (!application()) {
+    <div class="empty-state"><p>Candidature introuvable</p><a routerLink="/applications" class="btn-ghost">← Retour</a></div>
+  } @else {
+    <a routerLink="/applications" class="back-link">← Candidatures</a>
 
-  <div *ngIf="loading()" class="skeleton-hero"></div>
+    @if (actionMsg()) {
+      <div class="alert alert--success">✓ {{ actionMsg() }}</div>
+    }
 
-  <ng-container *ngIf="!loading() && application()">
-    <div class="detail-hero">
-      <div class="hero-left">
-        <div class="avatar">{{ application().candidateName?.charAt(0) }}</div>
+    <div class="app-header">
+      <div class="app-hero">
+        <div class="avatar">{{ getInitials(application()!.candidateName) }}</div>
         <div>
-          <h1>{{ application().candidateName }}</h1>
-          <p class="job-title">{{ application().jobTitle }}</p>
-          <p class="date">Candidature du {{ application().appliedAt | date:'dd/MM/yyyy' }}</p>
+          <h1 class="app-name">{{ application()!.candidateName }}</h1>
+          <p class="app-job">{{ application()!.jobOfferTitle }}</p>
+          <div class="app-meta">
+            <span>✉ {{ application()!.candidateEmail }}</span>
+            <span>📅 {{ application()!.receivedAt | date:'dd/MM/yyyy HH:mm' }}</span>
+            <span>🔗 {{ application()!.sourceChannel }}</span>
+          </div>
         </div>
       </div>
-      <div class="hero-right">
-        <div class="score-display score-display--{{ getScoreColor(application().matchingScore) }}">
-          <span class="score-val">{{ application().matchingScore }}</span>
-          <span class="score-label">/ 100<br>Score IA</span>
+      <div class="app-scores">
+        <div class="score-circle score-circle--{{ getScoreColor(application()!.matchingScore) }}">
+          <span class="score-val">{{ application()!.matchingScore }}%</span>
+          <span class="score-lbl">Score IA</span>
         </div>
-        <span class="status-chip status-chip--{{ (application().status ?? '').toLowerCase() }}">
-          {{ getStatusLabel(application().status) }}
-        </span>
+        <div class="status-block">
+          <span class="status status--{{ getStatusColor(application()!.status) }}">
+            {{ getStatusLabel(application()!.status) }}
+          </span>
+          @if (application()!.isQualified) {
+            <span class="qualified">✓ Qualifié</span>
+          }
+        </div>
       </div>
     </div>
 
-    <div class="detail-grid">
-      <!-- AI Recommendation -->
-      <div class="detail-card ai-card">
-        <h3>
-          <svg viewBox="0 0 20 20" fill="currentColor"><path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v1h8v-1zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-1a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v1h-3zM4.75 14.094A5.973 5.973 0 004 17v1H1v-1a3 3 0 013.75-2.906z"/></svg>
-          Analyse IA
-        </h3>
-        <p>{{ application().aiRecommendation ?? 'Aucune analyse IA disponible.' }}</p>
+    <div class="content-grid">
+      <div class="section-card">
+        <h2 class="section-title">Lettre de motivation</h2>
+        @if (application()!.coverLetter) {
+          <p class="cover-letter">{{ application()!.coverLetter }}</p>
+        } @else {
+          <p class="empty-section">Aucune lettre de motivation</p>
+        }
+
+        @if (application()!.cvFilePath) {
+          <div style="margin-top:1.5rem">
+            <h2 class="section-title">CV</h2>
+            <a [href]="application()!.cvFilePath" target="_blank" class="cv-link">
+              📄 Télécharger le CV
+            </a>
+          </div>
+        }
       </div>
 
-      <!-- Skills -->
-      <div class="detail-card">
-        <h3>Compétences identifiées</h3>
-        <div class="skills-list" *ngIf="application().skills?.length; else noSkills">
-          <span *ngFor="let s of application().skills" class="skill-chip">{{ s }}</span>
+      <div class="side-panel">
+        <div class="action-card">
+          <h3 class="action-title">Actions</h3>
+          <div class="action-buttons">
+            <a [routerLink]="['/candidates', application()!.candidateId]" class="btn-ghost-full">
+              👤 Voir le profil candidat
+            </a>
+            <a [routerLink]="['/job-offers', application()!.jobOfferId]" class="btn-ghost-full">
+              📋 Voir l'offre
+            </a>
+            @if (application()!.status !== 'ACCEPTED') {
+              <button class="btn-action btn-action--jade" (click)="changeStatus('ACCEPTED')">✓ Accepter</button>
+            }
+            @if (application()!.status !== 'REJECTED') {
+              <button class="btn-action btn-action--rose" (click)="changeStatus('REJECTED')">✕ Refuser</button>
+            }
+            @if (application()!.status === 'ACCEPTED') {
+              <a [routerLink]="['/interviews']" class="btn-action btn-action--blue">📅 Planifier entretien</a>
+            }
+          </div>
         </div>
-        <ng-template #noSkills><p class="empty-text">Aucune compétence détectée.</p></ng-template>
       </div>
     </div>
-
-    <!-- Actions -->
-    <div class="actions-card">
-      <h3>Changer le statut</h3>
-      <div class="action-btns">
-        <button class="action-btn accept" (click)="updateStatus('ACCEPTED')" [disabled]="updating() || application().status === 'ACCEPTED'">
-          ✓ Accepter
-        </button>
-        <button class="action-btn review" (click)="updateStatus('IN_REVIEW')" [disabled]="updating() || application().status === 'IN_REVIEW'">
-          ⟳ En cours
-        </button>
-        <button class="action-btn reject" (click)="updateStatus('REJECTED')" [disabled]="updating() || application().status === 'REJECTED'">
-          ✕ Refuser
-        </button>
-      </div>
-      <div class="interview-link">
-        <a routerLink="/interviews/new" class="btn-primary">
-          <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"/></svg>
-          Planifier un entretien
-        </a>
-      </div>
-    </div>
-  </ng-container>
+  }
 </div>

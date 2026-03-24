@@ -9,7 +9,6 @@ export interface PageResponse<T> {
   empty: boolean;
 }
 
-/** Generic API wrapper (optional) */
 export interface ApiResponse<T> {
   data: T;
   message?: string;

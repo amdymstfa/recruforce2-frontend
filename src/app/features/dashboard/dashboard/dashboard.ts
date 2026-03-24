@@ -1,22 +1,21 @@
-import { Component, OnInit, signal, inject } from '@angular/core';
+import { Component, OnInit, signal, inject, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
+import { forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { ApiService } from '../../../core/services/api.service';
+import { AuthService } from '../../../core/services/auth';
 
-interface DashboardStats {
-  candidates: number;
-  jobOffers: number;
-  applications: number;
-  interviews: number;
-}
-
+interface ApplicationPage { content: RecentApplication[]; totalElements: number; }
 interface RecentApplication {
-  id: number;
-  candidateName: string;
-  jobTitle: string;
-  status: 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'IN_REVIEW';
-  matchingScore: number;
-  appliedAt: string;
+  id: number; candidateName: string; jobOfferTitle: string;
+  status: string; matchingScore: number; receivedAt: string; isQualified: boolean;
+}
+interface Stats { candidates: number; jobOffers: number; applications: number; interviews: number; }
+interface MLModel {
+  id: number; name: string; version: string; algorithm: string;
+  accuracy: number; precision: number; recall: number; f1Score: number;
+  predictionsCount: number; successRate: number; isActive: boolean;
 }
 
 @Component({
@@ -27,59 +26,75 @@ interface RecentApplication {
   styleUrls: ['./dashboard.scss']
 })
 export class DashboardComponent implements OnInit {
-  private api = inject(ApiService);
+  private api         = inject(ApiService);
+  private authService = inject(AuthService);
 
-  stats = signal<DashboardStats>({ candidates: 0, jobOffers: 0, applications: 0, interviews: 0 });
+  user        = this.authService.currentUser;
+  stats       = signal<Stats>({ candidates: 0, jobOffers: 0, applications: 0, interviews: 0 });
   recentApplications = signal<RecentApplication[]>([]);
-  loading = signal(true);
+  activeModel = signal<MLModel | null>(null);
+  loading     = signal(true);
   currentDate = new Date();
 
-  statCards = [
-    { key: 'candidates', label: 'Candidats', icon: 'users', color: 'indigo', route: '/candidates' },
-    { key: 'jobOffers', label: 'Offres actives', icon: 'briefcase', color: 'emerald', route: '/job-offers' },
-    { key: 'applications', label: 'Candidatures', icon: 'inbox', color: 'amber', route: '/applications' },
-    { key: 'interviews', label: 'Entretiens', icon: 'calendar', color: 'rose', route: '/interviews' },
-  ];
+  hour     = new Date().getHours();
+  greeting = computed(() => {
+    if (this.hour < 12) return 'Bonjour';
+    if (this.hour < 18) return 'Bon après-midi';
+    return 'Bonsoir';
+  });
 
-  ngOnInit(): void {
-    this.loadDashboardData();
-  }
+  isManager   = computed(() => this.user()?.role === 'MANAGER');
+  isRecruiter = computed(() => this.user()?.role === 'RECRUITER');
+  isAdmin     = computed(() => this.user()?.role === 'ADMIN');
+
+  statCards = computed(() => {
+    const base = [
+      { key: 'candidates', label: 'Candidats',    icon: 'users',     color: 'jade',  route: '/candidates',   trend: '+12%' },
+      { key: 'interviews', label: 'Entretiens',   icon: 'calendar',  color: 'rose',  route: '/interviews',   trend: '+5%'  },
+    ];
+    if (!this.isManager()) {
+      base.splice(1, 0,
+        { key: 'jobOffers',    label: 'Offres actives', icon: 'briefcase', color: 'blue',  route: '/job-offers',   trend: '+3%'  },
+        { key: 'applications', label: 'Candidatures',   icon: 'inbox',     color: 'amber', route: '/applications', trend: '+28%' },
+      );
+    }
+    return base;
+  });
+
+  ngOnInit(): void { this.loadDashboardData(); }
 
   loadDashboardData(): void {
     this.loading.set(true);
+    const isManager = this.isManager();
 
-    // Load stats
-    this.api.get<DashboardStats>('dashboard/stats').subscribe({
-      next: (data) => this.stats.set(data),
-      error: () => this.stats.set({ candidates: 45, jobOffers: 12, applications: 89, interviews: 23 })
-    });
-
-    // Load recent applications
-    this.api.get<RecentApplication[]>('applications?size=5&sort=appliedAt,desc').subscribe({
-      next: (data) => {
-        this.recentApplications.set(Array.isArray(data) ? data : []);
+    forkJoin({
+      candidates: this.api.get<any>('candidates/search', { keyword: 'a', page: 0, size: 1 }).pipe(catchError(() => of({ totalElements: 0 }))),
+      jobOffers:  isManager ? of({ totalElements: 0 }) : this.api.get<any>('job-offers', { page: 0, size: 1 }).pipe(catchError(() => of({ totalElements: 0 }))),
+      applications: isManager ? of({ content: [], totalElements: 0 }) : this.api.get<any>('applications/job-offer/1', { page: 0, size: 5 }).pipe(catchError(() => of({ content: [], totalElements: 0 }))),
+      interviews: this.api.get<any[]>('interviews/upcoming').pipe(catchError(() => of([]))),
+      mlModel:    this.api.get<MLModel>('ml-models/active').pipe(catchError(() => of(null)))
+    }).subscribe({
+      next: ({ candidates, jobOffers, applications, interviews, mlModel }) => {
+        this.stats.set({
+          candidates:   candidates?.totalElements ?? 0,
+          jobOffers:    jobOffers?.totalElements ?? 0,
+          applications: applications?.totalElements ?? 0,
+          interviews:   Array.isArray(interviews) ? interviews.length : 0,
+        });
+        this.recentApplications.set(isManager ? [] : (applications?.content ?? []));
+        this.activeModel.set(mlModel);
         this.loading.set(false);
       },
-      error: () => {
-        this.recentApplications.set([
-          { id: 1, candidateName: 'Marie Dupont', jobTitle: 'Développeur Full-Stack', status: 'PENDING', matchingScore: 87, appliedAt: '2026-03-09' },
-          { id: 2, candidateName: 'Ahmed Benali', jobTitle: 'Data Engineer', status: 'ACCEPTED', matchingScore: 92, appliedAt: '2026-03-08' },
-          { id: 3, candidateName: 'Lucas Martin', jobTitle: 'UX Designer', status: 'IN_REVIEW', matchingScore: 74, appliedAt: '2026-03-08' },
-          { id: 4, candidateName: 'Sofia Ribeiro', jobTitle: 'DevOps Engineer', status: 'REJECTED', matchingScore: 51, appliedAt: '2026-03-07' },
-          { id: 5, candidateName: 'Karim Fassi', jobTitle: 'Backend Java', status: 'PENDING', matchingScore: 81, appliedAt: '2026-03-07' },
-        ]);
-        this.loading.set(false);
-      }
+      error: () => this.loading.set(false)
     });
   }
 
-  getStatValue(key: string): number {
-    return this.stats()[key as keyof DashboardStats] ?? 0;
-  }
+  getStatValue(key: string): number { return this.stats()[key as keyof Stats] ?? 0; }
 
   getStatusLabel(status: string): string {
     const labels: Record<string, string> = {
-      PENDING: 'En attente', ACCEPTED: 'Accepté', REJECTED: 'Refusé', IN_REVIEW: 'En cours'
+      RECEIVED: 'Reçue', IN_PROCESS: 'En cours', PENDING: 'En attente',
+      ACCEPTED: 'Acceptée', REJECTED: 'Refusée', HIRED: 'Embauché'
     };
     return labels[status] ?? status;
   }
@@ -89,4 +104,12 @@ export class DashboardComponent implements OnInit {
     if (score >= 60) return 'mid';
     return 'low';
   }
+
+  getInitials(name: string): string {
+    return name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) ?? '??';
+  }
+
+  getAccuracyPercent():  number { return Math.round((this.activeModel()?.accuracy  ?? 0) * 100); }
+  getF1Percent():        number { return Math.round((this.activeModel()?.f1Score   ?? 0) * 100); }
+  getPrecisionPercent(): number { return Math.round((this.activeModel()?.precision ?? 0) * 100); }
 }

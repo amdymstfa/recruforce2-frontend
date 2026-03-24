@@ -1,64 +1,69 @@
-import { Component, OnInit, signal, inject } from '@angular/core';
+import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule, ActivatedRoute, Router } from '@angular/router';
+import { RouterModule, ActivatedRoute } from '@angular/router';
 import { ApiService } from '../../../core/services/api.service';
-import { NotificationService } from '../../../core/services/notification.service';
+import { Application } from '../../../core/models';
 
 @Component({
   selector: 'app-application-detail',
   standalone: true,
   imports: [CommonModule, RouterModule],
   templateUrl: './application-detail.html',
-  styleUrls: ['./application-detail.scss']
+  styleUrl: './application-detail.scss'
 })
 export class ApplicationDetailComponent implements OnInit {
-  private route = inject(ActivatedRoute);
-  private router = inject(Router);
   private api = inject(ApiService);
-  private notify = inject(NotificationService);
+  private route = inject(ActivatedRoute);
 
-  application = signal<any>(null);
+  application = signal<Application | null>(null);
   loading = signal(true);
-  updating = signal(false);
+  actionMsg = signal<string | null>(null);
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
-    if (id) this.loadApplication(+id);
+    if (id) {
+      this.api.get<Application>(`applications/${id}`).subscribe({
+        next: (data) => { this.application.set(data); this.loading.set(false); },
+        error: () => this.loading.set(false)
+      });
+    }
   }
 
-  loadApplication(id: number): void {
-    this.api.get<any>(`applications/${id}`).subscribe({
-      next: (data) => { this.application.set(data); this.loading.set(false); },
-      error: () => {
-        this.application.set({
-          id, candidateName: 'Marie Dupont', jobTitle: 'Développeur Full-Stack',
-          status: 'PENDING', matchingScore: 87, appliedAt: '2026-03-09',
-          candidateEmail: 'marie.dupont@example.com',
-          skills: ['Angular', 'TypeScript', 'Spring Boot'],
-          aiRecommendation: 'Candidat fortement recommandé. Compétences techniques solides.',
-        });
-        this.loading.set(false);
+  changeStatus(status: string): void {
+    const id = this.application()?.id;
+    if (!id) return;
+    this.api.patch<void>(`applications/${id}/status`, null, { params: { status } }).subscribe({
+      next: () => {
+        this.application.update(a => a ? { ...a, status } : a);
+        this.actionMsg.set(`Statut mis à jour : ${this.getStatusLabel(status)}`);
+        setTimeout(() => this.actionMsg.set(null), 3000);
       }
     });
   }
 
-  updateStatus(status: string): void {
-    if (!this.application()) return;
-    this.updating.set(true);
-    this.api.put(`applications/${this.application().id}/status`, { status }).subscribe({
-      next: () => {
-        this.application.update(a => ({ ...a, status }));
-        this.notify.success('Statut mis à jour');
-        this.updating.set(false);
-      },
-      error: () => { this.notify.error('Erreur mise à jour'); this.updating.set(false); }
-    });
+  getStatusColor(status: string): string {
+    const map: Record<string, string> = {
+      RECEIVED: 'gray', IN_PROCESS: 'blue', PENDING: 'amber',
+      ACCEPTED: 'jade', REJECTED: 'rose', HIRED: 'purple'
+    };
+    return map[status] ?? 'gray';
+  }
+
+  getStatusLabel(status: string): string {
+    const map: Record<string, string> = {
+      RECEIVED: 'Reçue', IN_PROCESS: 'En cours', PENDING: 'En attente',
+      ACCEPTED: 'Acceptée', REJECTED: 'Refusée', HIRED: 'Embauché'
+    };
+    return map[status] ?? status;
   }
 
   getScoreColor(score: number): string {
-    if (score >= 80) return 'high'; if (score >= 60) return 'mid'; return 'low';
+    if (score >= 80) return 'jade';
+    if (score >= 60) return 'amber';
+    return 'rose';
   }
-  getStatusLabel(s: string): string {
-    return ({ PENDING: 'En attente', ACCEPTED: 'Accepté', REJECTED: 'Refusé', IN_REVIEW: 'En cours' })[s] ?? s;
+
+  getInitials(name: string): string {
+    return name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) ?? '??';
   }
 }

@@ -1,0 +1,153 @@
+<div class="page">
+  @if (loading()) {
+    <div class="loading-state"><div class="spinner"></div><p>Chargement du profil...</p></div>
+  } @else if (!candidate()) {
+    <div class="empty-state"><p>Candidat introuvable</p><a routerLink="/candidates" class="btn-ghost">← Retour</a></div>
+  } @else {
+    <div class="profile-header">
+      <a routerLink="/candidates" class="back-link">← Candidats</a>
+
+      @if (actionMsg()) {
+        <div class="alert" [class.alert--success]="!actionMsg()!.includes('Erreur')" [class.alert--error]="actionMsg()!.includes('Erreur')">
+          {{ actionMsg() }}
+        </div>
+      }
+
+      <div class="profile-hero">
+        <div class="profile-avatar">{{ getInitials() }}</div>
+        <div class="profile-info">
+          <h1 class="profile-name">{{ candidate()!.firstName }} {{ candidate()!.lastName }}</h1>
+          @if (getCurrentExp()) {
+            <p class="profile-role">{{ getCurrentExp().position }} · {{ getCurrentExp().company }}</p>
+          }
+          <div class="profile-meta">
+            <span>{{ candidate()!.email }}</span>
+            @if (candidate()!.phone) { <span>{{ candidate()!.phone }}</span> }
+            @if (candidate()!.address) { <span>{{ candidate()!.address }}</span> }
+          </div>
+        </div>
+        <div class="profile-actions">
+          <a [href]="'mailto:' + candidate()!.email" class="btn-primary">✉ Contacter</a>
+          @if (candidate()!.cvPath) {
+            <a [href]="candidate()!.cvPath" target="_blank" class="btn-ghost">📄 CV</a>
+          }
+          @if (canArchive()) {
+            <button class="btn-danger" (click)="showArchive.set(true)">🗑 Archiver</button>
+          }
+        </div>
+      </div>
+
+      <div class="tabs">
+        <button class="tab" [class.active]="activeTab() === 'profile'"      (click)="activeTab.set('profile')">Profil</button>
+        <button class="tab" [class.active]="activeTab() === 'skills'"       (click)="activeTab.set('skills')">Compétences ({{ candidate()!.skills.length }})</button>
+        <button class="tab" [class.active]="activeTab() === 'applications'" (click)="activeTab.set('applications')">Candidatures ({{ candidate()!.applicationsCount }})</button>
+      </div>
+    </div>
+
+    @if (activeTab() === 'profile') {
+      <div class="content-grid">
+        <div class="section-card">
+          <h2 class="section-title">Expériences</h2>
+          @if (!candidate()!.experiences.length) {
+            <p class="empty-section">Aucune expérience renseignée</p>
+          }
+          @for (exp of candidate()!.experiences; track exp.id) {
+            <div class="timeline-item">
+              <div class="timeline-dot" [class.active]="exp.isCurrent"></div>
+              <div class="timeline-content">
+                <div class="timeline-title">{{ exp.position }}</div>
+                <div class="timeline-sub">{{ exp.company }}</div>
+                <div class="timeline-date">
+                  {{ exp.startDate ? (exp.startDate | date:'MMM yyyy') : 'Date non extraite' }} —
+                  {{ exp.isCurrent ? 'Présent' : (exp.endDate ? (exp.endDate | date:'MMM yyyy') : '') }}
+                  @if (exp.isCurrent) { <span class="badge-current">En cours</span> }
+                </div>
+                @if (exp.description) { <p class="timeline-desc">{{ exp.description }}</p> }
+              </div>
+            </div>
+          }
+        </div>
+
+        <div class="section-card">
+          <h2 class="section-title">Formation</h2>
+          @if (!candidate()!.educations.length) {
+            <p class="empty-section">Aucune formation renseignée</p>
+          }
+          @for (edu of candidate()!.educations; track edu.id) {
+            <div class="timeline-item">
+              <div class="timeline-dot"></div>
+              <div class="timeline-content">
+                <div class="timeline-title">{{ edu.degree }}</div>
+                <div class="timeline-sub">{{ edu.institution }}</div>
+                @if (edu.field) { <div class="timeline-field">{{ edu.field }}</div> }
+                <div class="timeline-date">{{ edu.startDate | date:'yyyy' }} — {{ edu.endDate | date:'yyyy' }}</div>
+              </div>
+            </div>
+          }
+          @if (candidate()!.languages.length) {
+            <h2 class="section-title" style="margin-top:2rem">Langues</h2>
+            <div class="languages-list">
+              @for (lang of candidate()!.languages; track lang.id) {
+                <div class="lang-item">
+                  <span class="lang-name">{{ lang.name }}</span>
+                  <span class="lang-level">{{ lang.level }}</span>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      </div>
+    }
+
+    @if (activeTab() === 'skills') {
+      <div class="skills-grid">
+        @for (skill of candidate()!.skills; track skill.id) {
+          <div class="skill-card">
+            <div class="skill-top">
+              <span class="skill-name">{{ skill.name }}</span>
+              <span class="skill-badge skill-badge--{{ getMasteryColor(skill.masteryLevel) }}">{{ getMasteryLabel(skill.masteryLevel) }}</span>
+            </div>
+            <div class="skill-type">{{ skill.type }}</div>
+            @if (skill.yearsExperience) {
+              <div class="skill-exp">{{ skill.yearsExperience }} an(s) d'expérience</div>
+            }
+            <div class="skill-bar">
+              <div class="skill-bar-fill skill-bar-fill--{{ getMasteryColor(skill.masteryLevel) }}"
+                   [style.width]="skill.masteryLevel === 'ADVANCED' ? '100%' : skill.masteryLevel === 'INTERMEDIATE' ? '66%' : '33%'">
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+    }
+
+    @if (activeTab() === 'applications') {
+      <div class="section-card">
+        <p class="empty-section">{{ candidate()!.applicationsCount }} candidature(s) enregistrée(s)</p>
+        <a routerLink="/applications" class="btn-ghost" style="margin-top:1rem; display:inline-flex">
+          Voir les candidatures →
+        </a>
+      </div>
+    }
+
+    <!-- Modal Archivage -->
+    @if (showArchive()) {
+      <div class="modal-overlay" (click)="showArchive.set(false)">
+        <div class="modal" (click)="$event.stopPropagation()">
+          <div class="modal-icon">🗑️</div>
+          <h3 class="modal-title">Archiver ce candidat ?</h3>
+          <p class="modal-sub">
+            Conformément au RGPD, les données personnelles du candidat seront anonymisées.
+            Cette action est irréversible.
+          </p>
+          <div class="modal-actions">
+            <button class="btn-ghost" (click)="showArchive.set(false)">Annuler</button>
+            <button class="btn-danger" (click)="archiveCandidate()" [disabled]="archiving()">
+              {{ archiving() ? 'Archivage...' : 'Confirmer l\'archivage' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    }
+  }
+</div>

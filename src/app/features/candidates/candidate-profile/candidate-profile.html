@@ -1,121 +1,121 @@
-<div class="profile-container">
-
-  <!-- Loading skeleton -->
-  <div *ngIf="loading()" class="profile-skeleton">
-    <div class="skeleton-hero"></div>
-    <div class="skeleton-body">
-      <div class="skeleton-line w60"></div>
-      <div class="skeleton-line w40"></div>
-      <div class="skeleton-line w80"></div>
-    </div>
-  </div>
-
-  <ng-container *ngIf="!loading() && candidate()">
-    <!-- Back + Actions -->
+<div class="page">
+  @if (loading()) {
+    <div class="loading-state"><div class="spinner"></div></div>
+  } @else if (!candidate()) {
+    <div class="empty-state"><p>Candidat introuvable</p></div>
+  } @else {
     <div class="topbar">
-      <button class="back-btn" (click)="goBack()">
-        <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9.707 14.707a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 1.414L7.414 9H15a1 1 0 110 2H7.414l2.293 2.293a1 1 0 010 1.414z" clip-rule="evenodd"/></svg>
-        Retour aux candidats
-      </button>
-      <div class="action-group">
-        <label class="upload-btn" [class.loading]="uploading()">
-          <svg *ngIf="!uploading()" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clip-rule="evenodd"/></svg>
-          <svg *ngIf="uploading()" class="spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4"/></svg>
-          <span>{{ uploading() ? 'Upload…' : 'Uploader CV' }}</span>
-          <input type="file" accept=".pdf,.doc,.docx" (change)="onCvUpload($event)" [disabled]="uploading()" hidden>
-        </label>
-        <a [routerLink]="['/candidates', candidate()!.id, 'edit']" class="btn-outline">Modifier</a>
-      </div>
+      <button class="back-btn" (click)="goBack()">← Retour aux candidats</button>
+      <label class="upload-btn" [class.loading]="uploading()">
+        <span>{{ uploading() ? 'Upload...' : '⬆ Uploader CV' }}</span>
+        <input type="file" accept=".pdf,.doc,.docx" (change)="onCvUpload($event)" [disabled]="uploading()" hidden>
+      </label>
     </div>
 
-    <!-- Hero card -->
     <div class="hero-card">
       <div class="hero-avatar">{{ getInitials() }}</div>
       <div class="hero-info">
         <h1>{{ candidate()!.firstName }} {{ candidate()!.lastName }}</h1>
         <div class="hero-meta">
-          <span>
-            <svg viewBox="0 0 16 16" fill="currentColor"><path d="M2 4a2 2 0 012-2h8a2 2 0 012 2v.5a.5.5 0 01-.146.354L10 8.707V13.5a.5.5 0 01-.276.447l-3 1.5A.5.5 0 016 15V8.707L2.146 4.854A.5.5 0 012 4.5V4z"/></svg>
-            {{ candidate()!.email }}
-          </span>
-          <span *ngIf="candidate()!.phone">
-            <svg viewBox="0 0 16 16" fill="currentColor"><path d="M3.654 1.328a.678.678 0 00-1.015-.063L1.605 2.3c-.483.484-.661 1.169-.45 1.77a17.568 17.568 0 004.168 6.608 17.569 17.569 0 006.608 4.168c.601.211 1.286.033 1.77-.45l1.034-1.034a.678.678 0 00-.063-1.015l-2.307-1.794a.678.678 0 00-.58-.122l-2.19.547a1.745 1.745 0 01-1.657-.459L5.482 8.062a1.745 1.745 0 01-.46-1.657l.548-2.19a.678.678 0 00-.122-.58L3.654 1.328z"/></svg>
-            {{ candidate()!.phone }}
-          </span>
-          <span>
-            <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 3.5a.5.5 0 00-1 0V9a.5.5 0 00.252.434l3.5 2a.5.5 0 00.496-.868L8 8.71V3.5z"/><path d="M8 16A8 8 0 108 0a8 8 0 000 16zm7-8A7 7 0 111 8a7 7 0 0114 0z"/></svg>
-            {{ candidate()!.experience ?? 0 }} an(s) d'expérience
-          </span>
+          <span>{{ candidate()!.email }}</span>
+          @if (candidate()!.phone) { <span>{{ candidate()!.phone }}</span> }
+          @if (candidate()!.address) { <span>{{ candidate()!.address }}</span> }
         </div>
       </div>
-      <div class="hero-status">
-        <span class="status-pill" [class]="'status-pill--' + (candidate()!.status ?? 'active').toLowerCase()">
-          {{ candidate()!.status ?? 'Actif' }}
-        </span>
-        <div class="cv-badge" *ngIf="candidate()!.cvParsed">
-          <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
-          CV Parsé
-        </div>
+      <div class="hero-badges">
+        @if (candidate()!.parsedCvId) {
+          <span class="cv-badge">✓ CV Parsé</span>
+        }
+        <span class="apps-badge">{{ candidate()!.applicationsCount }} candidature(s)</span>
       </div>
     </div>
 
-    <!-- Tabs -->
     <div class="tabs">
       <button class="tab" [class.active]="activeTab() === 'profile'" (click)="activeTab.set('profile')">Profil</button>
-      <button class="tab" [class.active]="activeTab() === 'applications'" (click)="activeTab.set('applications')">Candidatures</button>
+      <button class="tab" [class.active]="activeTab() === 'skills'" (click)="activeTab.set('skills')">Compétences ({{ candidate()!.skills.length }})</button>
       <button class="tab" [class.active]="activeTab() === 'cv'" (click)="activeTab.set('cv')">CV</button>
     </div>
 
-    <!-- Profile tab -->
-    <div *ngIf="activeTab() === 'profile'" class="tab-content">
+    @if (activeTab() === 'profile') {
       <div class="content-grid">
-        <!-- Skills -->
         <div class="info-card">
-          <h3>Compétences</h3>
-          <div class="skills-list" *ngIf="candidate()!.skills?.length; else noSkills">
-            <span *ngFor="let skill of candidate()!.skills" class="skill-chip">{{ skill }}</span>
+          <h3 class="card-title">Expériences</h3>
+          @for (exp of candidate()!.experiences; track exp.id) {
+            <div class="timeline-item">
+              <div class="tl-dot" [class.active]="exp.isCurrent"></div>
+              <div>
+                <div class="tl-title">{{ exp.position }} · {{ exp.company }}</div>
+                <div class="tl-date">{{ exp.startDate | date:'MMM yyyy' }} — {{ exp.isCurrent ? 'Présent' : (exp.endDate | date:'MMM yyyy') }}</div>
+                @if (exp.description) { <p class="tl-desc">{{ exp.description }}</p> }
+              </div>
+            </div>
+          }
+          @if (!candidate()!.experiences.length) {
+            <p class="empty-text">Aucune expérience renseignée.</p>
+          }
+        </div>
+        <div class="info-card">
+          <h3 class="card-title">Formation</h3>
+          @for (edu of candidate()!.educations; track edu.id) {
+            <div class="timeline-item">
+              <div class="tl-dot"></div>
+              <div>
+                <div class="tl-title">{{ edu.degree }}</div>
+                <div class="tl-sub">{{ edu.institution }}</div>
+                @if (edu.field) { <div class="tl-field">{{ edu.field }}</div> }
+                <div class="tl-date">{{ edu.startDate | date:'yyyy' }} — {{ edu.endDate | date:'yyyy' }}</div>
+              </div>
+            </div>
+          }
+          @if (!candidate()!.educations.length) {
+            <p class="empty-text">Aucune formation renseignée.</p>
+          }
+          @if (candidate()!.languages.length) {
+            <h3 class="card-title" style="margin-top:1.5rem">Langues</h3>
+            @for (lang of candidate()!.languages; track lang.id) {
+              <div class="lang-row">
+                <span>{{ lang.name }}</span><span class="lang-level">{{ lang.level }}</span>
+              </div>
+            }
+          }
+        </div>
+      </div>
+    }
+
+    @if (activeTab() === 'skills') {
+      <div class="skills-grid">
+        @for (skill of candidate()!.skills; track skill.id) {
+          <div class="skill-card">
+            <div class="skill-name">{{ skill.name }}</div>
+            <div class="skill-type">{{ skill.type }}</div>
+            <span class="skill-level-badge">{{ skill.masteryLevel }}</span>
+            @if (skill.yearsExperience) {
+              <div class="skill-exp">{{ skill.yearsExperience }} an(s)</div>
+            }
           </div>
-          <ng-template #noSkills><p class="empty-text">Aucune compétence renseignée.</p></ng-template>
-        </div>
-
-        <!-- Info -->
-        <div class="info-card">
-          <h3>Informations</h3>
-          <dl class="info-list">
-            <dt>Email</dt><dd>{{ candidate()!.email }}</dd>
-            <dt>Téléphone</dt><dd>{{ candidate()!.phone ?? '—' }}</dd>
-            <dt>Expérience</dt><dd>{{ candidate()!.experience ?? 0 }} an(s)</dd>
-            <dt>Inscrit le</dt><dd>{{ candidate()!.createdAt | date:'dd/MM/yyyy' }}</dd>
-          </dl>
-        </div>
+        }
+        @if (!candidate()!.skills.length) {
+          <p class="empty-text">Aucune compétence renseignée.</p>
+        }
       </div>
-    </div>
+    }
 
-    <!-- Applications tab -->
-    <div *ngIf="activeTab() === 'applications'" class="tab-content">
+    @if (activeTab() === 'cv') {
       <div class="info-card">
-        <h3>Candidatures du candidat</h3>
-        <p class="empty-text">Chargement des candidatures…</p>
-      </div>
-    </div>
-
-    <!-- CV tab -->
-    <div *ngIf="activeTab() === 'cv'" class="tab-content">
-      <div class="info-card cv-tab">
-        <h3>CV</h3>
-        <ng-container *ngIf="candidate()!.cvParsed; else noCv">
-          <p class="cv-ok">CV téléchargé et parsé par l'IA ✓</p>
-          <a [routerLink]="['/candidates', candidate()!.id, 'cv']" class="btn-primary">Voir le CV parsé</a>
-        </ng-container>
-        <ng-template #noCv>
+        <h3 class="card-title">CV</h3>
+        @if (candidate()!.parsedCvId) {
+          <p class="cv-ok">✓ CV uploadé et parsé par l'IA</p>
+          @if (candidate()!.cvPath) {
+            <a [href]="candidate()!.cvPath" target="_blank" class="btn-primary">📄 Télécharger le CV</a>
+          }
+        } @else {
           <p class="empty-text">Aucun CV uploadé.</p>
           <label class="upload-btn">
-            <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clip-rule="evenodd"/></svg>
-            Uploader un CV
+            ⬆ Uploader un CV
             <input type="file" accept=".pdf,.doc,.docx" (change)="onCvUpload($event)" hidden>
           </label>
-        </ng-template>
+        }
       </div>
-    </div>
-  </ng-container>
+    }
+  }
 </div>

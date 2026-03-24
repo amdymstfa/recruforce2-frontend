@@ -1,0 +1,156 @@
+<div class="apply-page">
+
+  <!-- Header -->
+  <div class="apply-header">
+    <a routerLink="/apply" class="back-link">← Toutes les offres</a>
+    <div class="brand">
+      <span class="brand-icon">⬡</span>
+      <span class="brand-name">RecruForce<sup>2</sup></span>
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div class="loading-state"><div class="spinner"></div></div>
+
+  } @else if (submitted()) {
+    <div class="success-state">
+      <div class="success-icon">🎉</div>
+      <h2 class="success-title">CV envoyé avec succès !</h2>
+      <p class="success-sub">
+        Notre IA analyse votre CV en ce moment. Vous recevrez une réponse
+        par email dans les prochaines heures.
+      </p>
+      <div class="success-steps">
+        <div class="step step--done">
+          <div class="step-dot">✓</div>
+          <span>CV reçu</span>
+        </div>
+        <div class="step-line"></div>
+        <div class="step step--active">
+          <div class="step-dot">🤖</div>
+          <span>Analyse IA</span>
+        </div>
+        <div class="step-line"></div>
+        <div class="step">
+          <div class="step-dot">📧</div>
+          <span>Réponse email</span>
+        </div>
+      </div>
+      <a routerLink="/apply" class="btn-back">Voir d'autres offres</a>
+    </div>
+
+  } @else if (!offer()) {
+    <div class="empty-state">
+      <p>Offre introuvable</p>
+      <a routerLink="/apply" class="btn-back">← Retour</a>
+    </div>
+
+  } @else {
+    <div class="apply-content">
+
+      <!-- Offer Info -->
+      <div class="offer-panel">
+        <div class="offer-tags">
+          <span class="contract-tag">{{ offer()!.contractType }}</span>
+          <span class="location-tag">📍 {{ offer()!.location }}</span>
+        </div>
+        <h1 class="offer-title">{{ offer()!.title }}</h1>
+        <div class="offer-meta">
+          <span>💰 {{ offer()!.minSalary | number:"1.0-0" }}€ — {{ offer()!.maxSalary | number:"1.0-0" }}€</span>
+          <span>🎯 {{ offer()!.minExperience }}—{{ offer()!.maxExperience }} ans</span>
+        </div>
+        <p class="offer-desc">{{ offer()!.description }}</p>
+
+        @if (offer()!.requiredSkills?.length) {
+          <div class="skills-section">
+            <h3 class="skills-label">Compétences recherchées</h3>
+            <div class="skills-list">
+              @for (skill of offer()!.requiredSkills; track skill.id) {
+                <span class="skill-tag">{{ skill.name }}</span>
+              }
+            </div>
+          </div>
+        }
+
+        <div class="ai-badge">
+          <span>🤖</span>
+          <div>
+            <strong>Analyse IA automatique</strong>
+            <p>Notre IA extrait vos informations et calcule votre score de compatibilité instantanément.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Drop Zone -->
+      <div class="drop-panel">
+        <h2 class="drop-title">Déposez votre CV</h2>
+        <p class="drop-sub">Notre IA s'occupe du reste — aucun formulaire à remplir</p>
+
+        @if (error()) {
+          <div class="alert">✕ {{ error() }}</div>
+        }
+
+        <!-- Drop Zone -->
+        <div class="drop-zone"
+             [class.dragging]="isDragging()"
+             [class.has-file]="selectedFile()"
+             (dragover)="onDragOver($event)"
+             (dragleave)="onDragLeave($event)"
+             (drop)="onDrop($event)"
+             (click)="!selectedFile() && fileInput.click()">
+
+          @if (!selectedFile()) {
+            <div class="drop-content">
+              <div class="drop-icon">
+                <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <path d="M24 4v28M12 16l12-12 12 12" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M8 36h32a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4a2 2 0 012-2z"/>
+                </svg>
+              </div>
+              <p class="drop-main">Glissez votre CV ici</p>
+              <p class="drop-or">— ou —</p>
+              <button type="button" class="btn-browse" (click)="$event.stopPropagation(); fileInput.click()">
+                Parcourir les fichiers
+              </button>
+              <p class="drop-hint">PDF ou DOCX · max 10MB</p>
+            </div>
+          } @else {
+            <div class="file-preview">
+              <div class="file-icon">
+                @if (selectedFile()!.name.endsWith(".pdf")) { 📕 } @else { 📘 }
+              </div>
+              <div class="file-info">
+                <div class="file-name">{{ selectedFile()!.name }}</div>
+                <div class="file-meta">
+                  {{ (selectedFile()!.size / 1024 / 1024).toFixed(2) }} MB
+                  · Prêt à envoyer ✓
+                </div>
+              </div>
+              <button type="button" class="file-remove" (click)="$event.stopPropagation(); removeFile()">✕</button>
+            </div>
+          }
+        </div>
+
+        <input #fileInput type="file" accept=".pdf,.docx,.doc"
+               (change)="onFileChange($event)" style="display:none" />
+
+        <!-- Submit -->
+        <button class="btn-submit" (click)="submit()"
+                [disabled]="!selectedFile() || submitting()">
+          @if (submitting()) {
+            <svg class="spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+              <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83"/>
+            </svg>
+            Analyse en cours...
+          } @else {
+            🚀 Envoyer mon CV
+          }
+        </button>
+
+        <p class="privacy">
+          🔒 Vos données sont traitées conformément au RGPD
+        </p>
+      </div>
+    </div>
+  }
+</div>

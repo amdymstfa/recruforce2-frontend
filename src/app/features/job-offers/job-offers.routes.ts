@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { roleGuard } from '../../core/guards/role.guard';
 
 export const JOB_OFFERS_ROUTES: Routes = [
   {
@@ -7,14 +8,18 @@ export const JOB_OFFERS_ROUTES: Routes = [
   },
   {
     path: 'new',
+    canActivate: [roleGuard],
+    data: { roles: ['ADMIN', 'RECRUITER'] },
+    loadComponent: () => import('./job-offer-form/job-offer-form').then(m => m.JobOfferFormComponent)
+  },
+  {
+    path: ':id/edit',
+    canActivate: [roleGuard],
+    data: { roles: ['ADMIN', 'RECRUITER'] },
     loadComponent: () => import('./job-offer-form/job-offer-form').then(m => m.JobOfferFormComponent)
   },
   {
     path: ':id',
     loadComponent: () => import('./job-offer-detail/job-offer-detail').then(m => m.JobOfferDetailComponent)
-  },
-  {
-    path: ':id/edit',
-    loadComponent: () => import('./job-offer-form/job-offer-form').then(m => m.JobOfferFormComponent)
   }
 ];

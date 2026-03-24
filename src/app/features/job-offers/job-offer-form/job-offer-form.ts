@@ -1,79 +1,84 @@
-import { Component, OnInit, signal, inject } from '@angular/core';
+import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { RouterModule, Router, ActivatedRoute } from '@angular/router';
+import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { ApiService } from '../../../core/services/api.service';
-import { NotificationService } from '../../../core/services/notification.service';
+import { JobOffer } from '../../../core/models';
 
 @Component({
   selector: 'app-job-offer-form',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterModule],
+  imports: [CommonModule, RouterModule, ReactiveFormsModule],
   templateUrl: './job-offer-form.html',
-  styleUrls: ['./job-offer-form.scss']
+  styleUrl: './job-offer-form.scss'
 })
 export class JobOfferFormComponent implements OnInit {
-  private fb = inject(FormBuilder);
-  private api = inject(ApiService);
+  private api    = inject(ApiService);
   private router = inject(Router);
-  private route = inject(ActivatedRoute);
-  private notify = inject(NotificationService);
+  private route  = inject(ActivatedRoute);
+  private fb     = inject(FormBuilder);
 
-  offerForm: FormGroup;
-  loading = signal(false);
-  saving = signal(false);
-  editMode = signal(false);
-  offerId = signal<number | null>(null);
+  loading  = signal(false);
+  error    = signal<string | null>(null);
+  isEdit   = signal(false);
+  offerId  = signal<number | null>(null);
 
-  contractTypes = ['CDI', 'CDD', 'Stage', 'Alternance', 'Freelance'];
-  departments = ['Engineering', 'Design', 'Data', 'Product', 'Marketing', 'Sales', 'Finance', 'HR', 'Infrastructure'];
+  form = this.fb.group({
+    title:             ['', Validators.required],
+    description:       ['', Validators.required],
+    location:          ['', Validators.required],
+    contractType:      ['CDI', Validators.required],
+    minExperience:     [0,  Validators.required],
+    maxExperience:     [5,  Validators.required],
+    minSalary:         [30000, Validators.required],
+    maxSalary:         [50000, Validators.required],
+    expirationDate:    ['', Validators.required],
+    publishOnLinkedin: [false],
+  });
 
-  constructor() {
-    this.offerForm = this.fb.group({
-      title: ['', [Validators.required, Validators.minLength(3)]],
-      department: ['', Validators.required],
-      contractType: ['CDI', Validators.required],
-      location: [''],
-      salary: [''],
-      description: ['', [Validators.required, Validators.minLength(20)]],
-      requirements: [''],
-      status: ['DRAFT', Validators.required]
-    });
-  }
+  contractTypes = ['CDI', 'CDD', 'STAGE', 'FREELANCE', 'ALTERNANCE'];
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
-    if (id) {
-      this.editMode.set(true);
+    if (id && id !== 'new') {
+      this.isEdit.set(true);
       this.offerId.set(+id);
-      this.loadOffer(+id);
+      this.api.get<JobOffer>(`job-offers/${id}`).subscribe({
+        next: (offer) => {
+          this.form.patchValue({
+            title:             offer.title,
+            description:       offer.description,
+            location:          offer.location,
+            contractType:      offer.contractType,
+            minExperience:     offer.minExperience,
+            maxExperience:     offer.maxExperience,
+            minSalary:         offer.minSalary,
+            maxSalary:         offer.maxSalary,
+            expirationDate:    offer.expirationDate?.substring(0, 10) ?? '',
+            publishOnLinkedin: offer.publishedOnLinkedin,
+          });
+        },
+        error: () => this.error.set('Erreur lors du chargement')
+      });
     }
   }
 
-  loadOffer(id: number): void {
+  submit(): void {
+    if (this.form.invalid) { this.form.markAllAsTouched(); return; }
     this.loading.set(true);
-    this.api.get<any>(`job-offers/${id}`).subscribe({
-      next: (data) => { this.offerForm.patchValue(data); this.loading.set(false); },
-      error: () => this.loading.set(false)
-    });
-  }
+    this.error.set(null);
 
-  onSubmit(): void {
-    if (this.offerForm.invalid) { this.offerForm.markAllAsTouched(); return; }
-    this.saving.set(true);
+    const payload = { ...this.form.value, requiredSkillIds: [] };
 
-    const request = this.editMode()
-      ? this.api.put(`job-offers/${this.offerId()}`, this.offerForm.value)
-      : this.api.post('job-offers', this.offerForm.value);
+    const request$ = this.isEdit()
+      ? this.api.put<JobOffer>(`job-offers/${this.offerId()}`, payload)
+      : this.api.post<JobOffer>('job-offers', { ...payload, status: 'DRAFT' });
 
-    request.subscribe({
-      next: () => {
-        this.notify.success(this.editMode() ? 'Offre mise à jour !' : 'Offre créée et publiée sur LinkedIn !');
-        this.router.navigate(['/job-offers']);
-      },
-      error: () => {
-        this.notify.error('Erreur lors de la sauvegarde.');
-        this.saving.set(false);
+    request$.subscribe({
+      next: (offer) => this.router.navigate(['/job-offers', offer.id]),
+      error: (err) => {
+        this.error.set(err?.error?.message ?? 'Erreur lors de la sauvegarde');
+        this.loading.set(false);
       }
     });
   }

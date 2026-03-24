@@ -1,0 +1,62 @@
+<div class="page">
+  <div class="page-header">
+    <a routerLink="/candidates" class="back-link">← Candidats</a>
+    <div>
+      <div class="page-tag">Nouveau candidat</div>
+      <h1 class="page-title">Créer un profil candidat</h1>
+    </div>
+  </div>
+
+  @if (error()) {
+    <div class="alert alert--error">✕ {{ error() }}</div>
+  }
+
+  <div class="form-card">
+    <form [formGroup]="form" (ngSubmit)="submit()" class="form-grid">
+      <div class="field">
+        <label class="field-label">Prénom *</label>
+        <input formControlName="firstName" type="text" class="field-input" placeholder="Jean" />
+      </div>
+      <div class="field">
+        <label class="field-label">Nom *</label>
+        <input formControlName="lastName" type="text" class="field-input" placeholder="Dupont" />
+      </div>
+      <div class="field">
+        <label class="field-label">Email *</label>
+        <input formControlName="email" type="email" class="field-input" placeholder="jean@example.com" />
+      </div>
+      <div class="field">
+        <label class="field-label">Téléphone</label>
+        <input formControlName="phone" type="text" class="field-input" placeholder="+33600000000" />
+      </div>
+      <div class="field field--full">
+        <label class="field-label">Adresse</label>
+        <input formControlName="address" type="text" class="field-input" placeholder="Paris, France" />
+      </div>
+      <div class="field field--full">
+        <label class="field-label">CV (PDF, DOCX)</label>
+        <div class="file-drop" (click)="fileInput.click()">
+          @if (selectedFile()) {
+            <div class="file-selected">
+              <span>📄</span>
+              <span>{{ selectedFile()!.name }}</span>
+            </div>
+          } @else {
+            <div class="file-placeholder">
+              <span class="file-icon">⬆</span>
+              <span>Cliquer pour uploader le CV</span>
+              <span class="file-hint">PDF, DOCX — max 10MB</span>
+            </div>
+          }
+          <input #fileInput type="file" accept=".pdf,.docx,.doc" (change)="onFileChange($event)" style="display:none" />
+        </div>
+      </div>
+      <div class="form-actions">
+        <a routerLink="/candidates" class="btn-ghost">Annuler</a>
+        <button type="submit" class="btn-primary" [disabled]="form.invalid || loading()">
+          {{ loading() ? 'Création...' : 'Créer le candidat' }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

@@ -1,68 +1,89 @@
-<div class="page-container">
+<div class="page">
   <div class="page-header">
     <div>
-      <h1>Offres d'emploi</h1>
-      <p class="subtitle">{{ filteredOffers().length }} offre(s)</p>
+      <div class="page-tag">Recrutement</div>
+      <h1 class="page-title">Offres d'emploi</h1>
+      <p class="page-sub">{{ offers().length }} offre(s) affichée(s)</p>
     </div>
-    <a routerLink="/job-offers/new" class="btn-primary">
-      <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/></svg>
-      Nouvelle offre
-    </a>
+    @if (canCreate()) {
+      <a routerLink="/job-offers/new" class="btn-primary">+ Nouvelle offre</a>
+    }
   </div>
 
-  <div class="controls">
-    <div class="filter-tabs">
-      <button *ngFor="let f of statusFilters" class="filter-tab" [class.active]="activeFilter() === f.value" (click)="setFilter(f.value)">
-        {{ f.label }}
-      </button>
-    </div>
+  <!-- Search Bar Premium -->
+  <div class="search-area">
     <div class="search-box">
-      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="9" r="6"/><path d="M15 15l3 3"/></svg>
-      <input type="text" placeholder="Rechercher une offre…" [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event)" />
-    </div>
-  </div>
-
-  <div *ngIf="loading()" class="cards-grid">
-    <div *ngFor="let i of [1,2,3,4]" class="skeleton-card"></div>
-  </div>
-
-  <div *ngIf="!loading()" class="cards-grid">
-    <div *ngFor="let offer of filteredOffers(); trackBy: trackById" class="offer-card">
-      <div class="card-header">
-        <div class="offer-icon">
-          <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M6 6V5a3 3 0 013-3h2a3 3 0 013 3v1h2a2 2 0 012 2v3.57A22.952 22.952 0 0110 13a22.95 22.95 0 01-8-1.43V8a2 2 0 012-2h2zm2-1a1 1 0 011-1h2a1 1 0 011 1v1H8V5zm1 5a1 1 0 011-1h.01a1 1 0 110 2H10a1 1 0 01-1-1z" clip-rule="evenodd"/></svg>
-        </div>
-        <span class="status-badge status-badge--{{ offer.status.toLowerCase() }}">
-          {{ getStatusLabel(offer.status) }}
-        </span>
-      </div>
-
-      <div class="card-body">
-        <h3>{{ offer.title }}</h3>
-        <div class="card-meta">
-          <span *ngIf="offer.department">{{ offer.department }}</span>
-          <span *ngIf="offer.contractType" class="contract-type">{{ offer.contractType }}</span>
-        </div>
-        <p class="card-desc" *ngIf="offer.description">{{ offer.description | slice:0:100 }}…</p>
-      </div>
-
-      <div class="card-footer">
-        <div class="applications-count">
-          <svg viewBox="0 0 20 20" fill="currentColor"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5z" clip-rule="evenodd"/></svg>
-          {{ offer.applicationsCount ?? 0 }} candidature(s)
-        </div>
-        <div class="card-date">{{ offer.createdAt | date:'dd/MM/yyyy' }}</div>
-        <a [routerLink]="['/job-offers', offer.id]" class="card-link">Voir →</a>
-      </div>
-    </div>
-
-    <div *ngIf="filteredOffers().length === 0" class="empty-state">
-      <svg viewBox="0 0 64 64" fill="none" stroke="#cbd5e1" stroke-width="2">
-        <rect x="10" y="8" width="44" height="50" rx="4"/>
-        <path d="M20 20h24M20 28h24M20 36h16"/>
+      <svg class="search-icon" viewBox="0 0 20 20" fill="currentColor">
+        <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"/>
       </svg>
-      <p>Aucune offre trouvée.</p>
-      <a routerLink="/job-offers/new" class="btn-primary">Créer une offre</a>
+      <input type="text" 
+             placeholder="Rechercher par titre, lieu, contrat..." 
+             [ngModel]="searchKeyword()" 
+             (ngModelChange)="onSearchChange($event)"
+             class="search-input" />
     </div>
   </div>
+
+  <!-- Filter tabs -->
+  <div class="filter-tabs">
+    @for (opt of statusOptions; track opt.value) {
+      <button class="filter-tab" [class.active]="filterStatus() === opt.value" (click)="applyFilter(opt.value)">
+        {{ opt.label }}
+      </button>
+    }
+  </div>
+
+  @if (loading()) {
+    <div class="skeleton-grid">
+      @for (i of [1,2,3,4,5,6]; track i) { <div class="skeleton-card"></div> }
+    </div>
+  } @else if (offers().length === 0) {
+    <div class="empty-state">
+      <div class="empty-icon">📋</div>
+      <p>Aucune offre trouvée</p>
+      @if (canCreate()) {
+        <a routerLink="/job-offers/new" class="btn-primary">Créer une offre</a>
+      }
+    </div>
+  } @else {
+    <div class="offers-grid">
+      @for (offer of offers(); track offer.id) {
+        <a [routerLink]="['/job-offers', offer.id]" class="offer-card">
+          <div class="offer-top">
+            <div class="offer-status-row">
+              <span class="status-badge status-badge--{{ getStatusColor(offer.status) }}">{{ getStatusLabel(offer.status) }}</span>
+              <span class="offer-contract">{{ offer.contractType }}</span>
+            </div>
+            <h3 class="offer-title">{{ offer.title }}</h3>
+            <div class="offer-location">📍 {{ offer.location }}</div>
+          </div>
+          <div class="offer-mid">
+            <div class="offer-salary">{{ offer.minSalary | number:'1.0-0' }}€ — {{ offer.maxSalary | number:'1.0-0' }}€</div>
+            <div class="offer-exp">{{ offer.minExperience }}—{{ offer.maxExperience }} ans d'expérience</div>
+          </div>
+          <div class="skills-preview">
+            @for (skill of (offer.requiredSkills || []).slice(0, 3); track skill.id) {
+              <span class="skill-tag">{{ skill.name }}</span>
+            }
+            @if ((offer.requiredSkills || []).length > 3) {
+              <span class="skill-more">+{{ offer.requiredSkills.length - 3 }}</span>
+            }
+          </div>
+          <div class="offer-bottom">
+            <span class="offer-apps">{{ offer.applicationsCount }} candidature(s)</span>
+            @if (canModify()) {
+              <div class="offer-actions">
+                @if (offer.status === 'DRAFT') {
+                  <button class="action-btn action-btn--jade" (click)="publish(offer.id, $event)">Publier</button>
+                }
+                @if (offer.status === 'ACTIVE') {
+                  <button class="action-btn action-btn--gray" (click)="archive(offer.id, $event)">Archiver</button>
+                }
+              </div>
+            }
+          </div>
+        </a>
+      }
+    </div>
+  }
 </div>

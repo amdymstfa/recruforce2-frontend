@@ -1,42 +1,96 @@
-<div class="page-container">
+<div class="page">
   <div class="page-header">
-    <button class="back-btn" routerLink="/interviews">← Retour</button>
-    <h1>{{ editMode() ? 'Modifier l\'entretien' : 'Planifier un entretien' }}</h1>
+    <a routerLink="/interviews" class="back-link">← Entretiens</a>
+    <div>
+      <div class="page-tag">Planification</div>
+      <h1 class="page-title">Planifier un entretien</h1>
+      <p class="page-sub">Soft Skills → Recruteur &nbsp;·&nbsp; Hard Skills → Manager</p>
+    </div>
   </div>
 
-  <form [formGroup]="form" (ngSubmit)="onSubmit()" class="form-card" novalidate>
-    <div class="fields-grid">
-      <div class="field-group col-full">
-        <label>ID Candidat *</label>
-        <input type="number" formControlName="candidateId" placeholder="ID du candidat">
-        <span class="field-error" *ngIf="form.get('candidateId')?.invalid && form.get('candidateId')?.touched">Requis</span>
-      </div>
-      <div class="field-group">
-        <label>Date & Heure *</label>
-        <input type="datetime-local" formControlName="scheduledAt">
-        <span class="field-error" *ngIf="form.get('scheduledAt')?.invalid && form.get('scheduledAt')?.touched">Requis</span>
-      </div>
-      <div class="field-group">
-        <label>Type *</label>
-        <select formControlName="type">
-          <option *ngFor="let t of types" [value]="t">{{ t }}</option>
-        </select>
-      </div>
-      <div class="field-group col-full">
-        <label>Lieu / Lien</label>
-        <input type="text" formControlName="location" placeholder="Google Meet, Salle A, …">
-      </div>
-      <div class="field-group col-full">
-        <label>Notes préparatoires</label>
-        <textarea formControlName="notes" rows="4" placeholder="Points à aborder…"></textarea>
-      </div>
-    </div>
+  @if (error()) {
+    <div class="alert alert--error">✕ {{ error() }}</div>
+  }
 
-    <div class="form-actions">
-      <button type="button" class="btn-outline" routerLink="/interviews">Annuler</button>
-      <button type="submit" class="btn-primary" [disabled]="saving()">
-        {{ saving() ? 'Sauvegarde…' : (editMode() ? 'Mettre à jour' : 'Planifier') }}
-      </button>
-    </div>
-  </form>
+  <div class="form-card">
+    <form [formGroup]="form" (ngSubmit)="submit()" class="form-grid">
+
+      <!-- Type selector — pas lié à formControlName directement -->
+      <div class="field field--full">
+        <label class="field-label">Type d'entretien *</label>
+        <div class="type-selector">
+          @for (t of types; track t.value) {
+            <div class="type-option" [class.selected]="selectedType() === t.value"
+                 (click)="onTypeChange(t.value)">
+              <span class="type-icon">{{ t.value === 'SOFT_SKILLS' ? '🗣️' : '💻' }}</span>
+              <span class="type-label">{{ t.label }}</span>
+              <span class="type-sub">{{ t.sub }}</span>
+            </div>
+          }
+        </div>
+      </div>
+
+      <div class="field field--full">
+        <label class="field-label">Candidature *</label>
+        @if (applications().length === 0) {
+          <div class="field-hint">⚠ Aucune candidature qualifiée/acceptée disponible.</div>
+        } @else {
+          <select formControlName="applicationId" class="field-input">
+            <option value="">Sélectionner une candidature</option>
+            @for (app of applications(); track app.id) {
+              <option [value]="app.id">
+                {{ app.candidateName }} — {{ app.jobOfferTitle }} ({{ app.matchingScore }}%)
+              </option>
+            }
+          </select>
+        }
+      </div>
+
+      <div class="field field--full">
+        <label class="field-label">
+          {{ selectedType() === 'SOFT_SKILLS' ? 'Recruteur intervieweur *' : 'Manager intervieweur *' }}
+        </label>
+        @if (filteredInterviewers().length === 0) {
+          <div class="field-hint">
+            ⚠ Aucun {{ selectedType() === 'SOFT_SKILLS' ? 'recruteur' : 'manager' }} disponible.
+          </div>
+        } @else {
+          <select formControlName="interviewerId" class="field-input">
+            <option value="">Sélectionner un intervieweur</option>
+            @for (u of filteredInterviewers(); track u.id) {
+              <option [value]="u.id">{{ u.firstName }} {{ u.lastName }}</option>
+            }
+          </select>
+        }
+      </div>
+
+      <div class="field">
+        <label class="field-label">Date et heure *</label>
+        <input formControlName="dateTime" type="datetime-local" class="field-input" />
+      </div>
+
+      <div class="field">
+        <label class="field-label">Durée (minutes) *</label>
+        <input formControlName="durationMinutes" type="number" class="field-input" min="15" step="15" />
+      </div>
+
+      <div class="field">
+        <label class="field-label">Lieu (si présentiel)</label>
+        <input formControlName="location" type="text" class="field-input" placeholder="Ex: Bureau Paris" />
+      </div>
+
+      <div class="field">
+        <label class="field-label">Lien visio (si distanciel)</label>
+        <input formControlName="videoLink" type="url" class="field-input" placeholder="https://meet.google.com/..." />
+      </div>
+
+      <div class="form-actions">
+        <a routerLink="/interviews" class="btn-ghost">Annuler</a>
+        <button type="submit" class="btn-primary"
+          [disabled]="form.invalid || loading() || filteredInterviewers().length === 0">
+          {{ loading() ? 'Planification...' : 'Planifier l\'entretien' }}
+        </button>
+      </div>
+    </form>
+  </div>
 </div>

@@ -1,0 +1,79 @@
+<div class="public-page">
+
+  <!-- Header -->
+  <div class="public-header">
+    <div class="brand">
+      <span class="brand-icon">⬡</span>
+      <span class="brand-name">RecruForce<sup>2</sup></span>
+    </div>
+    <div class="header-content">
+      <h1 class="header-title">Rejoignez notre équipe</h1>
+      <p class="header-sub">{{ totalElements() }} offre(s) disponible(s) — Déposez votre CV et notre IA analysera votre profil en temps réel</p>
+    </div>
+  </div>
+
+  <!-- Search -->
+  <div class="search-wrap">
+    <div class="search-bar">
+      <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"/></svg>
+      <input type="text" placeholder="Rechercher par titre, lieu, contrat..."
+             [(ngModel)]="searchKeyword" (input)="search()" class="search-input" />
+    </div>
+  </div>
+
+  <!-- Offers Grid -->
+  @if (loading()) {
+    <div class="skeleton-grid">
+      @for (i of [1,2,3,4,5,6]; track i) { <div class="skeleton-card"></div> }
+    </div>
+  } @else if (offers().length === 0) {
+    <div class="empty-state">
+      <div class="empty-icon">🔍</div>
+      <p>Aucune offre disponible pour le moment</p>
+    </div>
+  } @else {
+    <div class="offers-grid">
+      @for (offer of offers(); track offer.id) {
+        <div class="offer-card">
+          <div class="offer-header">
+            <span class="contract-tag">{{ offer.contractType }}</span>
+            <span class="location-tag">📍 {{ offer.location }}</span>
+          </div>
+          <h3 class="offer-title">{{ offer.title }}</h3>
+          <p class="offer-desc">{{ offer.description | slice:0:120 }}...</p>
+
+          <div class="offer-skills">
+            @for (skill of offer.requiredSkills.slice(0, 4); track skill.id) {
+              <span class="skill-tag">{{ skill.name }}</span>
+            }
+            @if (offer.requiredSkills.length > 4) {
+              <span class="skill-more">+{{ offer.requiredSkills.length - 4 }}</span>
+            }
+          </div>
+
+          <div class="offer-footer">
+            <div class="offer-info">
+              <span class="salary">{{ offer.minSalary | number:'1.0-0' }}€ — {{ offer.maxSalary | number:'1.0-0' }}€</span>
+              <span class="exp">{{ offer.minExperience }}—{{ offer.maxExperience }} ans</span>
+            </div>
+            <a [routerLink]="['/apply', offer.id]" class="btn-apply">Postuler →</a>
+          </div>
+        </div>
+      }
+    </div>
+
+    @if (totalPages() > 1) {
+      <div class="pagination">
+        <button class="page-btn" [disabled]="currentPage() === 0" (click)="goTo(currentPage() - 1)">←</button>
+        @for (p of pages(); track p) {
+          <button class="page-btn" [class.active]="p === currentPage()" (click)="goTo(p)">{{ p + 1 }}</button>
+        }
+        <button class="page-btn" [disabled]="currentPage() === totalPages() - 1" (click)="goTo(currentPage() + 1)">→</button>
+      </div>
+    }
+  }
+
+  <div class="public-footer">
+    <p>Déjà collaborateur ? <a routerLink="/auth/login">Se connecter</a></p>
+  </div>
+</div>

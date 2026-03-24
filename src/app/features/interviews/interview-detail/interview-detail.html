@@ -1,0 +1,147 @@
+<div class="page">
+  @if (loading()) {
+    <div class="loading-state"><div class="spinner"></div></div>
+  } @else if (!interview()) {
+    <div class="empty-state"><p>Entretien introuvable</p><a routerLink="/interviews" class="btn-ghost">← Retour</a></div>
+  } @else {
+    <a routerLink="/interviews" class="back-link">← Entretiens</a>
+
+    @if (actionMsg()) {
+      <div class="alert" [class.alert--success]="!actionMsg()!.includes('Erreur')" [class.alert--error]="actionMsg()!.includes('Erreur')">
+        {{ actionMsg() }}
+      </div>
+    }
+
+    <div class="header-card">
+      <div class="header-left">
+        <div class="interview-type-badge">{{ interview()!.type === 'SOFT_SKILLS' ? 'Soft Skills' : 'Hard Skills' }}</div>
+        <h1 class="interview-title">Entretien avec {{ interview()!.candidateName }}</h1>
+        <div class="interview-date">📅 {{ interview()!.dateTime | date:'EEEE d MMMM yyyy à HH:mm' }}</div>
+        <span class="status-badge status-badge--{{ getStatusColor(interview()!.status) }}">
+          {{ getStatusLabel(interview()!.status) }}
+        </span>
+      </div>
+      <div class="header-actions">
+        @if (interview()!.videoLink) {
+          <a [href]="interview()!.videoLink" target="_blank" class="btn-primary">🎥 Rejoindre</a>
+        }
+        @if (canCancel()) {
+          <button class="btn-danger" (click)="cancel()">Annuler</button>
+        }
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab" [class.active]="activeTab() === 'details'"  (click)="activeTab.set('details')">Détails</button>
+      <button class="tab" [class.active]="activeTab() === 'feedback'" (click)="activeTab.set('feedback')">
+        Feedback @if (isManager()) { <span class="tab-badge">Manager</span> }
+      </button>
+    </div>
+
+    @if (activeTab() === 'details') {
+      <div class="content-grid">
+        <div class="section-card">
+          <h2 class="section-title">Participants</h2>
+          <div class="participant">
+            <div class="participant-avatar">{{ getInitials(interview()!.candidateName) }}</div>
+            <div>
+              <div class="participant-name">{{ interview()!.candidateName }}</div>
+              <div class="participant-role">Candidat</div>
+              <div class="participant-email">{{ interview()!.candidateEmail }}</div>
+            </div>
+          </div>
+          <div class="participant" style="margin-top:1rem">
+            <div class="participant-avatar participant-avatar--blue">{{ getInitials(interview()!.interviewerName) }}</div>
+            <div>
+              <div class="participant-name">{{ interview()!.interviewerName }}</div>
+              <div class="participant-role">Intervieweur</div>
+              <div class="participant-email">{{ interview()!.interviewerEmail }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="info-card">
+          <h3 class="section-title">Détails</h3>
+          <div class="info-row"><span>Durée</span><strong>{{ interview()!.durationMinutes }} minutes</strong></div>
+          <div class="info-row"><span>Format</span><strong>{{ interview()!.videoLink ? 'Distanciel 🎥' : 'Présentiel 📍' }}</strong></div>
+          @if (!interview()!.videoLink && interview()!.location) {
+            <div class="info-row"><span>Lieu</span><strong>{{ interview()!.location }}</strong></div>
+          }
+          @if (interview()!.confirmationDate) {
+            <div class="info-row"><span>Confirmé le</span><strong>{{ interview()!.confirmationDate | date:'dd/MM/yyyy' }}</strong></div>
+          }
+          <div class="info-row">
+            <span>Candidature</span>
+            <a [routerLink]="['/applications', interview()!.applicationId]" class="link-val">Voir →</a>
+          </div>
+        </div>
+      </div>
+    }
+
+    @if (activeTab() === 'feedback') {
+      <div class="feedback-card">
+        @if (!canSubmitFeedback() && interview()!.status !== 'COMPLETED') {
+          <div class="feedback-locked">
+            <div class="lock-icon">🔒</div>
+            <p>Le feedback sera disponible après la complétion de l'entretien.</p>
+            <p class="lock-sub">Statut actuel : <strong>{{ getStatusLabel(interview()!.status) }}</strong></p>
+          </div>
+        } @else {
+          <h2 class="section-title">Évaluation du candidat</h2>
+          <form [formGroup]="feedbackForm" (ngSubmit)="saveFeedback()" class="feedback-grid">
+
+            <div class="score-fields">
+              <div class="score-field">
+                <label class="field-label">Compétences techniques /10</label>
+                <input formControlName="technicalScore" type="number" class="field-input" min="0" max="10" placeholder="7" />
+              </div>
+              <div class="score-field">
+                <label class="field-label">Soft Skills /10</label>
+                <input formControlName="softSkillsScore" type="number" class="field-input" min="0" max="10" placeholder="8" />
+              </div>
+              <div class="score-field">
+                <label class="field-label">Communication /10</label>
+                <input formControlName="communicationScore" type="number" class="field-input" min="0" max="10" placeholder="8" />
+              </div>
+              <div class="score-field">
+                <label class="field-label">Score global /10</label>
+                <input formControlName="overallScore" type="number" class="field-input" min="0" max="10" placeholder="8" />
+              </div>
+            </div>
+
+            <div class="field">
+              <label class="field-label">Recommandation</label>
+              <select formControlName="recommendation" class="field-input">
+                @for (r of recommendations; track r.value) {
+                  <option [value]="r.value">{{ r.label }}</option>
+                }
+              </select>
+            </div>
+
+            <div class="field">
+              <label class="field-label">Points forts</label>
+              <textarea formControlName="strengths" class="field-input field-textarea" rows="3" placeholder="Ce que le candidat maîtrise bien..."></textarea>
+            </div>
+
+            <div class="field">
+              <label class="field-label">Points à améliorer</label>
+              <textarea formControlName="weaknesses" class="field-input field-textarea" rows="3" placeholder="Ce qui peut être amélioré..."></textarea>
+            </div>
+
+            <div class="field field--full">
+              <label class="field-label">Notes complémentaires</label>
+              <textarea formControlName="notes" class="field-input field-textarea" rows="4" placeholder="Observations supplémentaires..."></textarea>
+            </div>
+
+            <div class="form-actions">
+              <button type="submit" class="btn-primary" [disabled]="savingFb()">
+                {{ savingFb() ? 'Enregistrement...' : '💾 Enregistrer le feedback' }}
+              </button>
+            </div>
+          </form>
+        }
+      </div>
+    }
+  }
+</div>

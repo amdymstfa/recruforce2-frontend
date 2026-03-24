@@ -1,105 +1,86 @@
-<div class="page-container">
-  <!-- Header -->
+<div class="page">
   <div class="page-header">
     <div>
-      <h1>Candidatures</h1>
-      <p class="subtitle">{{ filteredApplications().length }} candidature(s) trouvée(s)</p>
-    </div>
-    <a routerLink="/candidates/new" class="btn-primary">
-      <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/></svg>
-      Nouveau candidat
-    </a>
-  </div>
-
-  <!-- Filters + Search bar -->
-  <div class="controls">
-    <div class="filter-tabs">
-      <button
-        *ngFor="let f of statusFilters"
-        class="filter-tab"
-        [class.active]="activeFilter() === f.value"
-        (click)="setFilter(f.value)"
-      >{{ f.label }}</button>
-    </div>
-    <div class="search-box">
-      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5">
-        <circle cx="9" cy="9" r="6"/><path d="M15 15l3 3"/>
-      </svg>
-      <input
-        type="text"
-        placeholder="Rechercher un candidat ou un poste…"
-        [ngModel]="searchQuery()"
-        (ngModelChange)="setSearch($event)"
-      />
+      <div class="page-tag">Recrutement</div>
+      <h1 class="page-title">Candidatures</h1>
+      <p class="page-sub">{{ totalElements() }} candidature(s) pour cette offre</p>
     </div>
   </div>
 
-  <!-- Loading skeleton -->
-  <div *ngIf="loading()" class="skeleton-table">
-    <div *ngFor="let i of [1,2,3,4,5,6]" class="skeleton-row"></div>
+  <div class="offer-selector">
+    <label class="selector-label">Offre d'emploi</label>
+    <div class="offer-tabs">
+      @for (offer of jobOffers().slice(0, 6); track offer.id) {
+        <button class="offer-tab" [class.active]="selectedJobOffer() === offer.id" (click)="changeOffer(offer.id)">
+          {{ offer.title }}
+        </button>
+      }
+    </div>
   </div>
 
-  <!-- Table -->
-  <div *ngIf="!loading()" class="table-card">
-    <table class="data-table" *ngIf="filteredApplications().length > 0">
-      <thead>
-      <tr>
-        <th>Candidat</th>
-        <th>Poste</th>
-        <th>Score IA</th>
-        <th>Statut</th>
-        <th>Date de candidature</th>
-        <th>Actions</th>
-      </tr>
-      </thead>
-      <tbody>
-      <tr *ngFor="let app of filteredApplications(); trackBy: trackById">
-        <td>
+  <div class="filter-tabs">
+    @for (opt of statusOptions; track opt.value) {
+      <button class="filter-tab" [class.active]="filterStatus() === opt.value" (click)="applyFilter(opt.value)">
+        {{ opt.label }}
+      </button>
+    }
+  </div>
+
+  @if (loading()) {
+    <div class="skeleton-list">
+      @for (i of [1,2,3,4,5]; track i) { <div class="skeleton-row"></div> }
+    </div>
+  } @else if (applications().length === 0) {
+    <div class="empty-state">
+      <div class="empty-icon">📭</div>
+      <p>Aucune candidature pour cette offre</p>
+    </div>
+  } @else {
+    <div class="app-table">
+      <div class="table-header">
+        <span>Candidat</span>
+        <span>Score IA</span>
+        <span>Statut</span>
+        <span>Reçue le</span>
+        @if (canChangeStatus()) { <span>Actions</span> }
+      </div>
+      @for (app of applications(); track app.id) {
+        <a [routerLink]="['/applications', app.id]" class="table-row">
           <div class="candidate-cell">
-            <div class="avatar">{{ (app.candidateName ?? '?').charAt(0).toUpperCase() }}</div>
+            <div class="avatar">{{ getInitials(app.candidateName) }}</div>
             <div>
               <div class="candidate-name">{{ app.candidateName }}</div>
               <div class="candidate-email">{{ app.candidateEmail }}</div>
             </div>
           </div>
-        </td>
-        <td class="job-title">{{ app.jobTitle }}</td>
-        <td>
-          <div class="score-ring score-ring--{{ getScoreColor(app.matchingScore) }}">
-            <span>{{ app.matchingScore ?? '–' }}</span>
-            <small>/ 100</small>
+          <div>
+            <span class="score score--{{ getScoreColor(app.matchingScore) }}">{{ app.matchingScore }}%</span>
+            @if (app.isQualified) { <span class="qualified-badge">✓ Qualifié</span> }
           </div>
-        </td>
-        <td>
-            <span class="status-badge status-badge--{{ app.status.toLowerCase() }}">
-              {{ getStatusLabel(app.status) }}
-            </span>
-        </td>
-        <td class="date-cell">{{ app.appliedAt | date:'dd/MM/yyyy' }}</td>
-        <td>
-          <a [routerLink]="['/applications', app.id]" class="action-btn">Détail →</a>
-        </td>
-      </tr>
-      </tbody>
-    </table>
-
-    <!-- Empty state -->
-    <div *ngIf="filteredApplications().length === 0" class="empty-state">
-      <svg viewBox="0 0 64 64" fill="none" stroke="#cbd5e1" stroke-width="2">
-        <rect x="12" y="8" width="40" height="50" rx="4"/>
-        <line x1="20" y1="20" x2="44" y2="20"/>
-        <line x1="20" y1="28" x2="44" y2="28"/>
-        <line x1="20" y1="36" x2="34" y2="36"/>
-      </svg>
-      <p>Aucune candidature trouvée</p>
-      <button (click)="setFilter('ALL')" class="btn-secondary">Réinitialiser les filtres</button>
+          <div>
+            <span class="status status--{{ getStatusColor(app.status) }}">{{ getStatusLabel(app.status) }}</span>
+          </div>
+          <div class="date-cell">{{ app.receivedAt | date:'dd/MM/yyyy' }}</div>
+          @if (canChangeStatus()) {
+            <div class="actions-cell" (click)="$event.preventDefault(); $event.stopPropagation()">
+              @if (app.status === 'RECEIVED' || app.status === 'IN_PROCESS') {
+                <button class="action-btn action-btn--jade" (click)="changeStatus(app.id, 'ACCEPTED', $event)">Accepter</button>
+                <button class="action-btn action-btn--rose" (click)="changeStatus(app.id, 'REJECTED', $event)">Refuser</button>
+              }
+            </div>
+          }
+        </a>
+      }
     </div>
 
-    <!-- Pagination -->
-    <div class="pagination" *ngIf="filteredApplications().length > 0">
-      <button (click)="prevPage()" [disabled]="currentPage() === 0" class="page-btn">← Précédent</button>
-      <span class="page-info">Page {{ currentPage() + 1 }}</span>
-      <button (click)="nextPage()" [disabled]="(currentPage() + 1) * pageSize >= totalElements()" class="page-btn">Suivant →</button>
-    </div>
-  </div>
+    @if (totalPages() > 1) {
+      <div class="pagination">
+        <button class="page-btn" [disabled]="currentPage() === 0" (click)="goTo(currentPage() - 1)">←</button>
+        @for (p of pages(); track p) {
+          <button class="page-btn" [class.active]="p === currentPage()" (click)="goTo(p)">{{ p + 1 }}</button>
+        }
+        <button class="page-btn" [disabled]="currentPage() === totalPages() - 1" (click)="goTo(currentPage() + 1)">→</button>
+      </div>
+    }
+  }
 </div>

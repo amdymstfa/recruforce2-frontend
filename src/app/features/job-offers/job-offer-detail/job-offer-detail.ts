@@ -1,56 +1,72 @@
-import { Component, OnInit, signal, inject } from '@angular/core';
+import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, ActivatedRoute } from '@angular/router';
 import { ApiService } from '../../../core/services/api.service';
-import { NotificationService } from '../../../core/services/notification.service';
+import { AuthService } from '../../../core/services/auth';
+import { JobOffer } from '../../../core/models';
 
 @Component({
   selector: 'app-job-offer-detail',
   standalone: true,
   imports: [CommonModule, RouterModule],
   templateUrl: './job-offer-detail.html',
-  styleUrls: ['./job-offer-detail.scss']
+  styleUrl: './job-offer-detail.scss'
 })
 export class JobOfferDetailComponent implements OnInit {
-  private route = inject(ActivatedRoute);
   private api = inject(ApiService);
-  private notify = inject(NotificationService);
+  private route = inject(ActivatedRoute);
+  private authService = inject(AuthService);
 
-  offer = signal<any>(null);
-  applications = signal<any[]>([]);
+  offer = signal<JobOffer | null>(null);
   loading = signal(true);
+  actionMsg = signal<string | null>(null);
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
-    if (id) this.loadOffer(+id);
+    if (id) {
+      this.api.get<JobOffer>(`job-offers/${id}`).subscribe({
+        next: (data) => { this.offer.set(data); this.loading.set(false); },
+        error: () => this.loading.set(false)
+      });
+    }
   }
 
-  loadOffer(id: number): void {
-    this.api.get<any>(`job-offers/${id}`).subscribe({
-      next: (data) => { this.offer.set(data); this.loading.set(false); this.loadApplications(id); },
-      error: () => {
-        this.offer.set({ id, title: 'Développeur Full-Stack Angular/Spring', department: 'Engineering', contractType: 'CDI', status: 'PUBLISHED', location: 'Paris, France', description: 'Nous recherchons un développeur Full-Stack passionné pour rejoindre notre équipe.', createdAt: '2026-02-20', applicationsCount: 14 });
-        this.loading.set(false);
+  canModify(): boolean {
+    const role = this.authService.currentUser()?.role;
+    return role === 'ADMIN' || role === 'RECRUITER';
+  }
+
+  publish(): void {
+    const id = this.offer()?.id;
+    if (!id) return;
+    this.api.post<void>(`job-offers/${id}/publish`, {}).subscribe({
+      next: () => {
+        this.offer.update(o => o ? { ...o, status: 'ACTIVE' } : o);
+        this.actionMsg.set('Offre publiée avec succès');
+        setTimeout(() => this.actionMsg.set(null), 3000);
       }
     });
   }
 
-  loadApplications(offerId: number): void {
-    this.api.get<any[]>(`applications?jobOfferId=${offerId}`).subscribe({
-      next: (data) => this.applications.set(Array.isArray(data) ? data : []),
-      error: () => this.applications.set([])
+  archive(): void {
+    const id = this.offer()?.id;
+    if (!id) return;
+    this.api.post<void>(`job-offers/${id}/archive`, {}).subscribe({
+      next: () => {
+        this.offer.update(o => o ? { ...o, status: 'ARCHIVED' } : o);
+        this.actionMsg.set('Offre archivée');
+        setTimeout(() => this.actionMsg.set(null), 3000);
+      }
     });
   }
 
-  closeOffer(): void {
-    if (!this.offer()) return;
-    this.api.put(`job-offers/${this.offer().id}/status`, { status: 'CLOSED' }).subscribe({
-      next: () => { this.offer.update(o => ({ ...o, status: 'CLOSED' })); this.notify.success('Offre fermée.'); },
-      error: () => this.notify.error('Erreur.')
-    });
+  getStatusColor(status: string): string {
+    const map: Record<string, string> = { ACTIVE: 'jade', DRAFT: 'amber', ARCHIVED: 'gray' };
+    return map[status] ?? 'gray';
   }
 
-  getStatusLabel(s: string): string {
-    return ({ PUBLISHED: 'Publiée', DRAFT: 'Brouillon', CLOSED: 'Fermée' })[s] ?? s;
+  getStatusLabel(status: string): string {
+    const map: Record<string, string> = { ACTIVE: 'Active', DRAFT: 'Brouillon', ARCHIVED: 'Archivée' };
+    return map[status] ?? status;
   }
 }

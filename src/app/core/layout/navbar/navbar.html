@@ -1,0 +1,59 @@
+<nav class="navbar">
+  <div class="navbar-inner">
+
+    <a routerLink="/dashboard" class="navbar-brand">
+      <span class="brand-icon">⬡</span>
+      <span class="brand-name">RecruForce<sup>2</sup></span>
+    </a>
+
+    <ul class="navbar-links">
+      @for (item of visibleItems(); track item.route) {
+        <li>
+          <a [routerLink]="item.route"
+             [class.active]="isActive(item.route)"
+             class="navbar-link">
+            {{ item.label }}
+          </a>
+        </li>
+      }
+    </ul>
+
+    <div class="navbar-right">
+      <div class="user-menu">
+        <div class="user-avatar">{{ getInitials() }}</div>
+        <div class="user-info">
+          <span class="user-name">{{ user()?.firstName }} {{ user()?.lastName }}</span>
+          <span class="user-role">{{ user()?.role }}</span>
+        </div>
+        <button (click)="logout()" class="logout-btn" title="Deconnexion">
+          <svg viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 001 1h6a1 1 0 100-2H4V5h5a1 1 0 100-2H3zm10.293 3.293a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 01-1.414-1.414L14.586 11H8a1 1 0 110-2h6.586l-1.293-1.293a1 1 0 010-1.414z" clip-rule="evenodd"/>
+          </svg>
+        </button>
+      </div>
+
+      <button class="mobile-toggle" (click)="toggleMobile()">
+        <svg viewBox="0 0 20 20" fill="currentColor">
+          @if (mobileOpen()) {
+            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+          } @else {
+            <path fill-rule="evenodd" d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 15a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"/>
+          }
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  @if (mobileOpen()) {
+    <div class="mobile-menu">
+      @for (item of visibleItems(); track item.route) {
+        <a [routerLink]="item.route"
+           [class.active]="isActive(item.route)"
+           class="mobile-link">
+          {{ item.label }}
+        </a>
+      }
+      <button (click)="logout()" class="mobile-logout">Se deconnecter</button>
+    </div>
+  }
+</nav>

@@ -1,64 +1,107 @@
-import { Component, OnInit, signal, computed, inject } from '@angular/core';
+import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../../core/services/api.service';
-import { JobOffer } from '../../../core/models';
-
-type StatusFilter = 'ALL' | 'PUBLISHED' | 'DRAFT' | 'CLOSED';
+import { AuthService } from '../../../core/services/auth';
+import { JobOffer, JobOfferPage } from '../../../core/models';
 
 @Component({
   selector: 'app-job-offer-list',
   standalone: true,
   imports: [CommonModule, RouterModule, FormsModule],
   templateUrl: './job-offer-list.html',
-  styleUrls: ['./job-offer-list.scss']
+  styleUrl: './job-offer-list.scss'
 })
 export class JobOfferListComponent implements OnInit {
   private api = inject(ApiService);
+  private authService = inject(AuthService);
 
-  jobOffers = signal<JobOffer[]>([]);
+  allOffers = signal<JobOffer[]>([]);
+  offers = signal<JobOffer[]>([]);
   loading = signal(true);
-  activeFilter = signal<StatusFilter>('ALL');
-  searchQuery = signal('');
+  filterStatus = signal('all');
+  searchKeyword = signal('');
 
-  statusFilters: { value: StatusFilter; label: string }[] = [
-    { value: 'ALL', label: 'Toutes' },
-    { value: 'PUBLISHED', label: 'Publiées' },
-    { value: 'DRAFT', label: 'Brouillons' },
-    { value: 'CLOSED', label: 'Fermées' },
+  statusOptions = [
+    { value: 'all',      label: 'Toutes'     },
+    { value: 'ACTIVE',   label: 'Actives'    },
+    { value: 'DRAFT',    label: 'Brouillons' },
+    { value: 'ARCHIVED', label: 'Archivées'  },
   ];
 
-  filteredOffers = computed(() => {
-    let result = this.jobOffers();
-    const filter = this.activeFilter();
-    const q = this.searchQuery().toLowerCase();
+  ngOnInit(): void { this.load(); }
 
-    if (filter !== 'ALL') result = result.filter(o => o.status === filter);
-    if (q) result = result.filter(o => o.title?.toLowerCase().includes(q) || o.department?.toLowerCase().includes(q));
-    return result;
-  });
-
-  ngOnInit(): void {
-    this.api.get<JobOffer[]>('job-offers').subscribe({
-      next: (data) => { this.jobOffers.set(Array.isArray(data) ? data : (data as any).content ?? []); this.loading.set(false); },
-      error: () => {
-        this.jobOffers.set([
-          { id: 1, title: 'Développeur Full-Stack Angular/Spring', department: 'Engineering', status: 'PUBLISHED', applicationsCount: 14, createdAt: '2026-02-20', contractType: 'CDI' } as any,
-          { id: 2, title: 'Data Engineer Python', department: 'Data', status: 'PUBLISHED', applicationsCount: 8, createdAt: '2026-02-25', contractType: 'CDI' } as any,
-          { id: 3, title: 'UX Designer Senior', department: 'Design', status: 'DRAFT', applicationsCount: 0, createdAt: '2026-03-01', contractType: 'CDD' } as any,
-          { id: 4, title: 'DevOps Engineer', department: 'Infrastructure', status: 'CLOSED', applicationsCount: 22, createdAt: '2026-01-10', contractType: 'CDI' } as any,
-        ]);
+  load(): void {
+    this.loading.set(true);
+    this.api.get<JobOfferPage>('job-offers', { page: 0, size: 100 }).subscribe({
+      next: (data) => {
+        this.allOffers.set(data.content || []);
+        this.applyFilters();
         this.loading.set(false);
-      }
+      },
+      error: () => this.loading.set(false)
     });
   }
 
-  setFilter(f: StatusFilter): void { this.activeFilter.set(f); }
-  trackById(_: number, item: JobOffer): number { return item.id; }
+  onSearchChange(value: string): void {
+    this.searchKeyword.set(value);
+    this.applyFilters();
+  }
+
+  applyFilters(): void {
+    let result = this.allOffers();
+    
+    // Filtre par statut
+    if (this.filterStatus() !== 'all') {
+      result = result.filter(o => o.status === this.filterStatus());
+    }
+    
+    // Filtre par mot-clé
+    const kw = this.searchKeyword().trim().toLowerCase();
+    if (kw) {
+      result = result.filter(o =>
+        o.title.toLowerCase().includes(kw) ||
+        o.location.toLowerCase().includes(kw) ||
+        o.contractType.toLowerCase().includes(kw)
+      );
+    }
+    
+    this.offers.set(result);
+  }
+
+  applyFilter(status: string): void {
+    this.filterStatus.set(status);
+    this.applyFilters();
+  }
+
+  canCreate(): boolean {
+    const role = this.authService.currentUser()?.role;
+    return role === 'ADMIN' || role === 'RECRUITER';
+  }
+
+  canModify(): boolean {
+    const role = this.authService.currentUser()?.role;
+    return role === 'ADMIN' || role === 'RECRUITER';
+  }
+
+  getStatusColor(status: string): string {
+    const map: Record<string, string> = { ACTIVE: 'jade', DRAFT: 'amber', ARCHIVED: 'gray' };
+    return map[status] ?? 'gray';
+  }
 
   getStatusLabel(status: string): string {
-    const map: Record<string, string> = { PUBLISHED: 'Publiée', DRAFT: 'Brouillon', CLOSED: 'Fermée' };
+    const map: Record<string, string> = { ACTIVE: 'Active', DRAFT: 'Brouillon', ARCHIVED: 'Archivée' };
     return map[status] ?? status;
+  }
+
+  publish(id: number, event: Event): void {
+    event.preventDefault(); event.stopPropagation();
+    this.api.post<void>(`job-offers/${id}/publish`, {}).subscribe({ next: () => this.load() });
+  }
+
+  archive(id: number, event: Event): void {
+    event.preventDefault(); event.stopPropagation();
+    this.api.post<void>(`job-offers/${id}/archive`, {}).subscribe({ next: () => this.load() });
   }
 }
