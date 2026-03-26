@@ -6,16 +6,49 @@ import { catchError } from 'rxjs/operators';
 import { ApiService } from '../../../core/services/api.service';
 import { AuthService } from '../../../core/services/auth';
 
-interface ApplicationPage { content: RecentApplication[]; totalElements: number; }
 interface RecentApplication {
-  id: number; candidateName: string; jobOfferTitle: string;
-  status: string; matchingScore: number; receivedAt: string; isQualified: boolean;
+  id: number;
+  candidateName: string;
+  jobOfferTitle: string;
+  status: string;
+  matchingScore: number;
+  receivedAt: string;
+  isQualified: boolean;
 }
-interface Stats { candidates: number; jobOffers: number; applications: number; interviews: number; }
+
+interface Stats {
+  candidates:   number;
+  jobOffers:    number;
+  applications: number;
+  interviews:   number;
+}
+
 interface MLModel {
-  id: number; name: string; version: string; algorithm: string;
-  accuracy: number; precision: number; recall: number; f1Score: number;
-  predictionsCount: number; successRate: number; isActive: boolean;
+  id: number;
+  name: string;
+  version: string;
+  algorithm: string;
+  accuracy: number;
+  precision: number;
+  recall: number;
+  f1Score: number;
+  predictionsCount: number;
+  successRate: number;
+  isActive: boolean;
+}
+
+interface DashboardStats {
+  totalCandidates:     number;
+  totalJobOffers:      number;
+  activeJobOffers:     number;
+  totalApplications:   number;
+  applicationsToday:   number;
+  qualifiedApplications: number;
+  totalInterviews:     number;
+  upcomingInterviews:  number;
+  completedInterviews: number;
+  averageMatchingScore: number;
+  recentApplications:  RecentApplication[];
 }
 
 @Component({
@@ -29,12 +62,12 @@ export class DashboardComponent implements OnInit {
   private api         = inject(ApiService);
   private authService = inject(AuthService);
 
-  user        = this.authService.currentUser;
-  stats       = signal<Stats>({ candidates: 0, jobOffers: 0, applications: 0, interviews: 0 });
+  user               = this.authService.currentUser;
+  stats              = signal<Stats>({ candidates: 0, jobOffers: 0, applications: 0, interviews: 0 });
   recentApplications = signal<RecentApplication[]>([]);
-  activeModel = signal<MLModel | null>(null);
-  loading     = signal(true);
-  currentDate = new Date();
+  activeModel        = signal<MLModel | null>(null);
+  loading            = signal(true);
+  currentDate        = new Date();
 
   hour     = new Date().getHours();
   greeting = computed(() => {
@@ -49,13 +82,13 @@ export class DashboardComponent implements OnInit {
 
   statCards = computed(() => {
     const base = [
-      { key: 'candidates', label: 'Candidats',    icon: 'users',     color: 'jade',  route: '/candidates',   trend: '+12%' },
-      { key: 'interviews', label: 'Entretiens',   icon: 'calendar',  color: 'rose',  route: '/interviews',   trend: '+5%'  },
+      { key: 'candidates',   label: 'Candidats',      icon: 'users',     color: 'jade',  route: '/candidates',   trend: '' },
+      { key: 'interviews',   label: 'Entretiens',      icon: 'calendar',  color: 'rose',  route: '/interviews',   trend: '' },
     ];
     if (!this.isManager()) {
       base.splice(1, 0,
-        { key: 'jobOffers',    label: 'Offres actives', icon: 'briefcase', color: 'blue',  route: '/job-offers',   trend: '+3%'  },
-        { key: 'applications', label: 'Candidatures',   icon: 'inbox',     color: 'amber', route: '/applications', trend: '+28%' },
+        { key: 'jobOffers',    label: 'Offres actives',  icon: 'briefcase', color: 'blue',  route: '/job-offers',   trend: '' },
+        { key: 'applications', label: 'Candidatures',    icon: 'inbox',     color: 'amber', route: '/applications', trend: '' },
       );
     }
     return base;
@@ -65,36 +98,80 @@ export class DashboardComponent implements OnInit {
 
   loadDashboardData(): void {
     this.loading.set(true);
-    const isManager = this.isManager();
 
     forkJoin({
-      candidates: this.api.get<any>('candidates/search', { keyword: 'a', page: 0, size: 1 }).pipe(catchError(() => of({ totalElements: 0 }))),
-      jobOffers:  isManager ? of({ totalElements: 0 }) : this.api.get<any>('job-offers', { page: 0, size: 1 }).pipe(catchError(() => of({ totalElements: 0 }))),
-      applications: isManager ? of({ content: [], totalElements: 0 }) : this.api.get<any>('applications/job-offer/1', { page: 0, size: 5 }).pipe(catchError(() => of({ content: [], totalElements: 0 }))),
-      interviews: this.api.get<any[]>('interviews/upcoming').pipe(catchError(() => of([]))),
-      mlModel:    this.api.get<MLModel>('ml-models/active').pipe(catchError(() => of(null)))
+
+      dashStats: this.isAdmin()
+        ? this.api.get<DashboardStats>('admin/dashboard/stats').pipe(catchError(() => of(null)))
+        : of(null),
+
+
+      candidates: !this.isAdmin()
+        ? this.api.get<any>('candidates/search', { keyword: 'a', page: 0, size: 1 })
+            .pipe(catchError(() => of({ totalElements: 0 })))
+        : of(null),
+
+      jobOffers: !this.isAdmin() && !this.isManager()
+        ? this.api.get<any>('job-offers', { page: 0, size: 1 })
+            .pipe(catchError(() => of({ totalElements: 0 })))
+        : of(null),
+
+      applications: !this.isAdmin() && !this.isManager()
+        ? this.api.get<any>('applications', { page: 0, size: 5 })
+            .pipe(catchError(() => of({ content: [], totalElements: 0 })))
+        : of(null),
+
+
+      interviews: this.api.get<any[]>('interviews/upcoming')
+        .pipe(catchError(() => of([]))),
+
+
+      mlModel: this.api.get<MLModel>('ml-models/active')
+        .pipe(catchError(() => of(null))),
     }).subscribe({
-      next: ({ candidates, jobOffers, applications, interviews, mlModel }) => {
-        this.stats.set({
-          candidates:   candidates?.totalElements ?? 0,
-          jobOffers:    jobOffers?.totalElements ?? 0,
-          applications: applications?.totalElements ?? 0,
-          interviews:   Array.isArray(interviews) ? interviews.length : 0,
-        });
-        this.recentApplications.set(isManager ? [] : (applications?.content ?? []));
+      next: ({ dashStats, candidates, jobOffers, applications, interviews, mlModel }) => {
+
+        if (dashStats) {
+          // Admin : tout vient du dashboard stats
+          this.stats.set({
+            candidates:   dashStats.totalCandidates   ?? 0,
+            jobOffers:    dashStats.activeJobOffers   ?? 0,
+            applications: dashStats.totalApplications ?? 0,
+            interviews:   dashStats.upcomingInterviews ?? (Array.isArray(interviews) ? interviews.length : 0),
+          });
+          this.recentApplications.set(dashStats.recentApplications ?? []);
+        } else {
+          // Recruiter / Manager : stats séparées
+          this.stats.set({
+            candidates:   candidates?.totalElements  ?? 0,
+            jobOffers:    jobOffers?.totalElements   ?? 0,
+            applications: applications?.totalElements ?? 0,
+            interviews:   Array.isArray(interviews) ? interviews.length : 0,
+          });
+          this.recentApplications.set(
+            this.isManager() ? [] : (applications?.content ?? [])
+          );
+        }
+
         this.activeModel.set(mlModel);
         this.loading.set(false);
       },
-      error: () => this.loading.set(false)
+      error: () => this.loading.set(false),
     });
   }
 
-  getStatValue(key: string): number { return this.stats()[key as keyof Stats] ?? 0; }
+  getStatValue(key: string): number {
+    return this.stats()[key as keyof Stats] ?? 0;
+  }
 
   getStatusLabel(status: string): string {
     const labels: Record<string, string> = {
-      RECEIVED: 'Reçue', IN_PROCESS: 'En cours', PENDING: 'En attente',
-      ACCEPTED: 'Acceptée', REJECTED: 'Refusée', HIRED: 'Embauché'
+      RECEIVED:   'Reçue',
+      IN_PROCESS: 'En cours',
+      PENDING:    'En attente',
+      ACCEPTED:   'Acceptée',
+      REJECTED:   'Refusée',
+      HIRED:      'Embauché',
     };
     return labels[status] ?? status;
   }

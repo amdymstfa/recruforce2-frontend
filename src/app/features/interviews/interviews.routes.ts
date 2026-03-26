@@ -15,5 +15,17 @@ export const INTERVIEWS_ROUTES: Routes = [
   {
     path: ':id',
     loadComponent: () => import('./interview-detail/interview-detail').then(m => m.InterviewDetailComponent)
+  },
+  {
+    path: ':id/feedback/new',
+    canActivate: [roleGuard],
+    data: { roles: ['ADMIN', 'RECRUITER', 'MANAGER'] },
+    loadComponent: () => import('./feedback-form/feedback-form').then(m => m.FeedbackFormComponent)
+  },
+  {
+    path: ':id/feedback',
+    canActivate: [roleGuard],
+    data: { roles: ['ADMIN', 'RECRUITER', 'MANAGER'] },
+    loadComponent: () => import('./feedback-form/feedback-form').then(m => m.FeedbackFormComponent)
   }
 ];

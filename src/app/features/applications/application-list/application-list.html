@@ -3,84 +3,133 @@
     <div>
       <div class="page-tag">Recrutement</div>
       <h1 class="page-title">Candidatures</h1>
-      <p class="page-sub">{{ totalElements() }} candidature(s) pour cette offre</p>
+      <p class="page-sub">{{ totalElements() }} candidature(s)</p>
     </div>
   </div>
 
+  <!-- Mode switcher : Toutes / Par offre -->
+  <div class="view-switcher">
+    <button class="view-btn" [class.active]="viewMode() === 'all'" (click)="setViewMode('all')">
+      Toutes les candidatures
+    </button>
+    <button class="view-btn" [class.active]="viewMode() === 'by-offer'" (click)="setViewMode('by-offer')">
+      Par offre d'emploi
+    </button>
+  </div>
+
+  <!-- Sélecteur d'offre (visible si mode by-offer) -->
+  @if (viewMode() === 'by-offer') {
   <div class="offer-selector">
-    <label class="selector-label">Offre d'emploi</label>
+    <label class="selector-label">Filtrer par offre</label>
     <div class="offer-tabs">
-      @for (offer of jobOffers().slice(0, 6); track offer.id) {
-        <button class="offer-tab" [class.active]="selectedJobOffer() === offer.id" (click)="changeOffer(offer.id)">
-          {{ offer.title }}
-        </button>
+      @for (offer of jobOffers().slice(0, 8); track offer.id) {
+      <button class="offer-tab"
+              [class.active]="selectedJobOffer() === offer.id"
+              (click)="changeOffer(offer.id)">
+        {{ offer.title }}
+      </button>
+      }
+      @if (jobOffers().length === 0) {
+      <span class="no-offers">Aucune offre disponible</span>
       }
     </div>
   </div>
+  }
 
+  <!-- Filtres statut -->
   <div class="filter-tabs">
     @for (opt of statusOptions; track opt.value) {
-      <button class="filter-tab" [class.active]="filterStatus() === opt.value" (click)="applyFilter(opt.value)">
-        {{ opt.label }}
-      </button>
+    <button class="filter-tab"
+            [class.active]="filterStatus() === opt.value"
+            (click)="applyFilter(opt.value)">
+      {{ opt.label }}
+    </button>
     }
   </div>
 
   @if (loading()) {
-    <div class="skeleton-list">
-      @for (i of [1,2,3,4,5]; track i) { <div class="skeleton-row"></div> }
-    </div>
+  <div class="skeleton-list">
+    @for (i of [1,2,3,4,5]; track i) { <div class="skeleton-row"></div> }
+  </div>
+
+  } @else if (viewMode() === 'by-offer' && !selectedJobOffer()) {
+  <div class="empty-state">
+    <div class="empty-icon">☝️</div>
+    <p>Sélectionnez une offre pour voir ses candidatures</p>
+  </div>
+
   } @else if (applications().length === 0) {
-    <div class="empty-state">
-      <div class="empty-icon">📭</div>
-      <p>Aucune candidature pour cette offre</p>
-    </div>
+  <div class="empty-state">
+    <div class="empty-icon">📭</div>
+    <p>Aucune candidature trouvée</p>
+  </div>
+
   } @else {
-    <div class="app-table">
-      <div class="table-header">
-        <span>Candidat</span>
-        <span>Score IA</span>
-        <span>Statut</span>
-        <span>Reçue le</span>
-        @if (canChangeStatus()) { <span>Actions</span> }
-      </div>
-      @for (app of applications(); track app.id) {
-        <a [routerLink]="['/applications', app.id]" class="table-row">
-          <div class="candidate-cell">
-            <div class="avatar">{{ getInitials(app.candidateName) }}</div>
-            <div>
-              <div class="candidate-name">{{ app.candidateName }}</div>
-              <div class="candidate-email">{{ app.candidateEmail }}</div>
-            </div>
-          </div>
-          <div>
-            <span class="score score--{{ getScoreColor(app.matchingScore) }}">{{ app.matchingScore }}%</span>
-            @if (app.isQualified) { <span class="qualified-badge">✓ Qualifié</span> }
-          </div>
-          <div>
-            <span class="status status--{{ getStatusColor(app.status) }}">{{ getStatusLabel(app.status) }}</span>
-          </div>
-          <div class="date-cell">{{ app.receivedAt | date:'dd/MM/yyyy' }}</div>
-          @if (canChangeStatus()) {
-            <div class="actions-cell" (click)="$event.preventDefault(); $event.stopPropagation()">
-              @if (app.status === 'RECEIVED' || app.status === 'IN_PROCESS') {
-                <button class="action-btn action-btn--jade" (click)="changeStatus(app.id, 'ACCEPTED', $event)">Accepter</button>
-                <button class="action-btn action-btn--rose" (click)="changeStatus(app.id, 'REJECTED', $event)">Refuser</button>
-              }
-            </div>
-          }
-        </a>
-      }
+  <div class="app-table">
+    <div class="table-header">
+      <span>Candidat</span>
+      <span>Offre</span>
+      <span>Score IA</span>
+      <span>Statut</span>
+      <span>Reçue le</span>
+      @if (canChangeStatus()) { <span>Actions</span> }
     </div>
 
-    @if (totalPages() > 1) {
-      <div class="pagination">
-        <button class="page-btn" [disabled]="currentPage() === 0" (click)="goTo(currentPage() - 1)">←</button>
-        @for (p of pages(); track p) {
-          <button class="page-btn" [class.active]="p === currentPage()" (click)="goTo(p)">{{ p + 1 }}</button>
-        }
-        <button class="page-btn" [disabled]="currentPage() === totalPages() - 1" (click)="goTo(currentPage() + 1)">→</button>
+    @for (app of applications(); track app.id) {
+    <a [routerLink]="['/applications', app.id]" class="table-row">
+
+      <div class="candidate-cell">
+        <div class="avatar">{{ getInitials(app.candidateName) }}</div>
+        <div>
+          <div class="candidate-name">{{ app.candidateName }}</div>
+          <div class="candidate-email">{{ app.candidateEmail }}</div>
+        </div>
       </div>
+
+      <div class="offer-cell">{{ app.jobOfferTitle }}</div>
+
+      <div>
+        <span class="score score--{{ getScoreColor(app.matchingScore) }}">{{ app.matchingScore }}%</span>
+        @if (app.isQualified) { <span class="qualified-badge">✓</span> }
+      </div>
+
+      <div>
+            <span class="status status--{{ getStatusColor(app.status) }}">
+              {{ getStatusLabel(app.status) }}
+            </span>
+      </div>
+
+      <div class="date-cell">{{ app.receivedAt | date:'dd/MM/yyyy' }}</div>
+
+      @if (canChangeStatus()) {
+      <div class="actions-cell" (click)="$event.preventDefault(); $event.stopPropagation()">
+        @if (app.status === 'RECEIVED' || app.status === 'IN_PROCESS') {
+        <button class="action-btn action-btn--jade"
+                (click)="changeStatus(app.id, 'ACCEPTED', $event)">
+          Accepter
+        </button>
+        <button class="action-btn action-btn--rose"
+                (click)="changeStatus(app.id, 'REJECTED', $event)">
+          Refuser
+        </button>
+        }
+      </div>
+      }
+    </a>
     }
+  </div>
+
+  @if (totalPages() > 1) {
+  <div class="pagination">
+    <button class="page-btn" [disabled]="currentPage() === 0"
+            (click)="goTo(currentPage() - 1)">←</button>
+    @for (p of pages(); track p) {
+    <button class="page-btn" [class.active]="p === currentPage()"
+            (click)="goTo(p)">{{ p + 1 }}</button>
+    }
+    <button class="page-btn" [disabled]="currentPage() === totalPages() - 1"
+            (click)="goTo(currentPage() + 1)">→</button>
+  </div>
+  }
   }
 </div>

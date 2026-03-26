@@ -12,7 +12,7 @@ export interface StatItem {
   selector: 'app-stats',
   standalone: true,
   imports: [CommonModule],
-  template: `./stats.html`,
+  templateUrl: './stats.html',
   styleUrl: './stats.scss'
 })
 export class StatsComponent {

@@ -33,13 +33,16 @@
   } @else {
     <div class="interviews-list">
       @for (interview of filtered(); track interview.id) {
-        <a [routerLink]="['/interviews', interview.id]" class="interview-card">
-          <div class="interview-date">
+        <div class="interview-card" [class.has-feedback]="interview.hasFeedback">
+          <!-- Date -->
+          <div class="interview-date" [routerLink]="['/interviews', interview.id]">
             <div class="date-day">{{ interview.dateTime | date:'dd' }}</div>
             <div class="date-month">{{ interview.dateTime | date:'MMM' }}</div>
             <div class="date-time">{{ interview.dateTime | date:'HH:mm' }}</div>
           </div>
-          <div class="interview-info">
+
+          <!-- Infos Candidat -->
+          <div class="interview-info" [routerLink]="['/interviews', interview.id]">
             <div class="interview-candidate">
               <div class="avatar">{{ getInitials(interview.candidateName) }}</div>
               <div>
@@ -50,33 +53,52 @@
             <div class="interview-badges">
               <span class="type-badge type-badge--{{ getTypeColor(interview.type) }}">{{ getTypeLabel(interview.type) }}</span>
               <span class="status-badge status-badge--{{ getStatusColor(interview.status) }}">{{ getStatusLabel(interview.status) }}</span>
+              @if (interview.hasFeedback) {
+                <span class="status-badge status-badge--jade">✓ Feedback</span>
+              }
             </div>
           </div>
+
+          <!-- Meta & Actions -->
           <div class="interview-meta">
             <div class="meta-row"><span class="meta-label">Intervieweur</span><span class="meta-value">{{ interview.interviewerName }}</span></div>
-            <div class="meta-row"><span class="meta-label">Durée</span><span class="meta-value">{{ interview.durationMinutes }} min</span></div>
-            @if (interview.videoLink) {
-              <a [href]="interview.videoLink" target="_blank" class="video-link" (click)="$event.stopPropagation()">🎥 Rejoindre</a>
-            } @else {
-              <span class="location">📍 {{ interview.location }}</span>
+            
+            <div class="feedback-actions">
+              @if (interview.hasFeedback) {
+                <button class="btn-action btn-action--view" (click)="viewFeedback(interview.id)">
+                  👁️ Voir Feedback
+                </button>
+              } @else if (canGiveFeedback(interview)) {
+                <button class="btn-action btn-action--add" (click)="openFeedbackForm(interview.id)">
+                  📝 Noter le candidat
+                </button>
+              } @else if (interview.videoLink && interview.status !== 'COMPLETED') {
+                <a [href]="interview.videoLink" target="_blank" class="video-link">🎥 Rejoindre</a>
+              } @else {
+                <span class="location">📍 {{ interview.location }}</span>
+              }
+            </div>
+          </div>
+
+          <!-- Badge Statut -->
+          <div class="card-status-badge">
+            @if (isUpcoming(interview.dateTime) && interview.status !== 'COMPLETED') {
+              <div class="upcoming-badge">À venir</div>
             }
           </div>
-          @if (isUpcoming(interview.dateTime)) {
-            <div class="upcoming-badge">À venir</div>
-          }
-        </a>
+        </div>
       }
     </div>
   }
 </div>
 
-<!-- Modal Planifier Entretien -->
+<!-- Modal Planifier Entretien (Inchangé dans le style) -->
 @if (showModal()) {
   <div class="modal-overlay" (click)="closeModal()">
     <div class="modal-container" (click)="$event.stopPropagation()">
       <div class="modal-header">
         <h2 class="modal-title">Planifier un entretien</h2>
-        <p class="modal-sub">Soft Skills → Recruteur &nbsp;·&nbsp; Hard Skills → Manager</p>
+        <p class="modal-sub">Remplissez les informations pour le candidat</p>
         <button class="modal-close" (click)="closeModal()">✕</button>
       </div>
 
@@ -85,14 +107,11 @@
       }
 
       <form [formGroup]="form" (ngSubmit)="submit()" class="modal-form">
-
-        <!-- Type -->
         <div class="field">
           <label class="field-label">Type d'entretien *</label>
           <div class="type-selector">
             @for (t of types; track t.value) {
-              <div class="type-option" [class.selected]="selectedType() === t.value"
-                   (click)="onTypeChange(t.value)">
+              <div class="type-option" [class.selected]="selectedType() === t.value" (click)="onTypeChange(t.value)">
                 <span class="type-icon">{{ t.value === 'SOFT_SKILLS' ? '🗣️' : '💻' }}</span>
                 <span class="type-label">{{ t.label }}</span>
                 <span class="type-sub">{{ t.sub }}</span>
@@ -101,37 +120,26 @@
           </div>
         </div>
 
-        <!-- Candidature -->
         <div class="field">
           <label class="field-label">Candidature *</label>
-          @if (applications().length === 0) {
-            <div class="field-hint">⚠ Aucune candidature qualifiée disponible.</div>
-          } @else {
-            <select formControlName="applicationId" class="field-input">
-              <option value="">Sélectionner une candidature</option>
-              @for (app of applications(); track app.id) {
-                <option [value]="app.id">{{ app.candidateName }} — {{ app.jobOfferTitle }} ({{ app.matchingScore }}%)</option>
-              }
-            </select>
-          }
+          <select formControlName="applicationId" class="field-input">
+            <option value="">Sélectionner une candidature</option>
+            @for (app of applications(); track app.id) {
+              <option [value]="app.id">{{ app.candidateName }} — {{ app.jobOfferTitle }}</option>
+            }
+          </select>
         </div>
 
-        <!-- Intervieweur -->
         <div class="field">
-          <label class="field-label">{{ selectedType() === 'SOFT_SKILLS' ? 'Recruteur *' : 'Manager *' }}</label>
-          @if (filteredInterviewers().length === 0) {
-            <div class="field-hint">⚠ Aucun {{ selectedType() === 'SOFT_SKILLS' ? 'recruteur' : 'manager' }} disponible.</div>
-          } @else {
-            <select formControlName="interviewerId" class="field-input">
-              <option value="">Sélectionner un intervieweur</option>
-              @for (u of filteredInterviewers(); track u.id) {
-                <option [value]="u.id">{{ u.firstName }} {{ u.lastName }}</option>
-              }
-            </select>
-          }
+          <label class="field-label">Intervieweur *</label>
+          <select formControlName="interviewerId" class="field-input">
+            <option value="">Sélectionner un intervieweur</option>
+            @for (u of filteredInterviewers(); track u.id) {
+              <option [value]="u.id">{{ u.firstName }} {{ u.lastName }}</option>
+            }
+          </select>
         </div>
 
-        <!-- Date + Durée -->
         <div class="field-row">
           <div class="field">
             <label class="field-label">Date et heure *</label>
@@ -139,26 +147,13 @@
           </div>
           <div class="field">
             <label class="field-label">Durée (min) *</label>
-            <input formControlName="durationMinutes" type="number" class="field-input" min="15" step="15" />
-          </div>
-        </div>
-
-        <!-- Lieu / Visio -->
-        <div class="field-row">
-          <div class="field">
-            <label class="field-label">Lieu</label>
-            <input formControlName="location" type="text" class="field-input" placeholder="Bureau Paris" />
-          </div>
-          <div class="field">
-            <label class="field-label">Lien visio</label>
-            <input formControlName="videoLink" type="url" class="field-input" placeholder="https://meet.google.com/..." />
+            <input formControlName="durationMinutes" type="number" class="field-input" />
           </div>
         </div>
 
         <div class="modal-actions">
           <button type="button" class="btn-ghost" (click)="closeModal()">Annuler</button>
-          <button type="submit" class="btn-primary"
-            [disabled]="form.invalid || modalLoading() || filteredInterviewers().length === 0">
+          <button type="submit" class="btn-primary" [disabled]="form.invalid || modalLoading()">
             {{ modalLoading() ? 'Planification...' : 'Planifier' }}
           </button>
         </div>

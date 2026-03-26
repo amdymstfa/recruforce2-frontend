@@ -1,0 +1,89 @@
+<div class="page">
+  <div class="modal-wrapper">
+    <div class="page-header">
+      <div class="back-link" routerLink="/interviews">← Retour aux entretiens</div>
+      <h1 class="page-title">Évaluation de l'entretien</h1>
+      @if (interview()) {
+        <p class="page-sub">
+          Candidat : <strong>{{ interview()?.candidateName }}</strong> 
+          <span class="sep">·</span> 
+          {{ getTypeLabel(interview()?.type) }}
+        </p>
+      }
+    </div>
+
+    @if (loading()) {
+      <div class="loading-state">
+        <div class="spinner"></div>
+        <p>Chargement des informations...</p>
+      </div>
+    } @else if (error()) {
+      <div class="alert alert--error">
+        <span class="alert-icon">✕</span>
+        <div class="alert-content">{{ error() }}</div>
+      </div>
+    } @else {
+      <div class="form-container">
+        <form [formGroup]="form" (ngSubmit)="submit()" class="feedback-form">
+          
+          <!-- Score Global -->
+          <div class="field">
+            <label class="field-label">Note Globale (1 à 10)</label>
+            <div class="score-picker">
+              @for (s of [1,2,3,4,5,6,7,8,9,10]; track s) {
+                <button type="button" 
+                        class="score-btn" 
+                        [class.active]="form.value.overallScore === s"
+                        (click)="setScore(s)">
+                  {{ s }}
+                </button>
+              }
+            </div>
+          </div>
+
+          <!-- Recommandation -->
+          <div class="field">
+            <label class="field-label">Recommandation finale</label>
+            <div class="recommendation-grid">
+              @for (rec of recommendations; track rec.value) {
+                <div class="rec-option" 
+                     [class.selected]="form.value.recommendation === rec.value"
+                     [class]="rec.color"
+                     (click)="form.patchValue({recommendation: rec.value})">
+                  <span class="rec-icon">{{ rec.icon }}</span>
+                  <span class="rec-label">{{ rec.label }}</span>
+                </div>
+              }
+            </div>
+          </div>
+
+          <!-- Commentaires -->
+          <div class="field">
+            <label class="field-label">Commentaires généraux *</label>
+            <textarea formControlName="comments" 
+                      placeholder="Points forts, points faibles, attitude..." 
+                      class="field-input text-area"></textarea>
+            @if (form.get('comments')?.touched && form.get('comments')?.invalid) {
+              <small class="error-text">Le commentaire doit faire au moins 10 caractères.</small>
+            }
+          </div>
+
+          <!-- Notes Techniques -->
+          <div class="field">
+            <label class="field-label">Notes techniques (Optionnel)</label>
+            <textarea formControlName="technicalNotes" 
+                      placeholder="Compétences spécifiques validées, outils maîtrisés..." 
+                      class="field-input text-area"></textarea>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" class="btn-ghost" routerLink="/interviews">Annuler</button>
+            <button type="submit" class="btn-primary" [disabled]="form.invalid || submitting()">
+              {{ submitting() ? 'Envoi en cours...' : 'Enregistrer l\'évaluation' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    }
+  </div>
+</div>

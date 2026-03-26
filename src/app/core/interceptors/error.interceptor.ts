@@ -15,7 +15,7 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
       }
 
       if (error.status === 403) {
-        router.navigate(['/dashboard']); // or a /forbidden page
+        router.navigate(['/dashboard']); 
       }
 
       // Re-throw so individual components can also handle errors

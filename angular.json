@@ -30,11 +30,18 @@
           },
           "configurations": {
             "production": {
-              "budgets": [
-
-              ],
+              "budgets": [],
               "outputHashing": "all",
-              "optimization": true,
+              "optimization": {
+                "scripts": true,
+                "styles": {
+                  "minify": true,
+                  "inlineCritical": false
+                },
+                "fonts": {
+                  "inline": false
+                }
+              },
               "sourceMap": false,
               "namedChunks": false,
               "extractLicenses": true,

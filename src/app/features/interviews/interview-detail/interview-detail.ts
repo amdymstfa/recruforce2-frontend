@@ -1,7 +1,7 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, ActivatedRoute } from '@angular/router';
-import { ReactiveFormsModule, FormBuilder } from '@angular/forms';
+import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { ApiService } from '../../../core/services/api.service';
 import { AuthService } from '../../../core/services/auth';
 import { Interview } from '../../../core/models';
@@ -11,7 +11,7 @@ import { Interview } from '../../../core/models';
   standalone: true,
   imports: [CommonModule, RouterModule, ReactiveFormsModule],
   templateUrl: './interview-detail.html',
-  styleUrl: './interview-detail.scss'
+  styleUrls: ['./interview-detail.scss']
 })
 export class InterviewDetailComponent implements OnInit {
   private api         = inject(ApiService);
@@ -22,52 +22,94 @@ export class InterviewDetailComponent implements OnInit {
   interview   = signal<Interview | null>(null);
   loading     = signal(true);
   actionMsg   = signal<string | null>(null);
+  actionError = signal<string | null>(null);
   activeTab   = signal<'details' | 'feedback'>('details');
   savingFb    = signal(false);
 
+  recommendations: string[] = ['Oui', 'Non', 'Peut-être'];
+
   feedbackForm = this.fb.group({
-    technicalScore:      [null],
-    softSkillsScore:     [null],
-    communicationScore:  [null],
-    overallScore:        [null],
-    strengths:           [''],
-    weaknesses:          [''],
-    recommendation:      ['NEUTRAL'],
-    notes:               [''],
+    overallScore:   [null as number | null, [Validators.min(0), Validators.max(100)]],
+    generalComment: [''],
+    recommendation: [''],
+    evaluatorId:    [null as number | null],
   });
 
-  recommendations = [
-    { value: 'STRONGLY_RECOMMENDED', label: '⭐⭐ Fortement recommandé' },
-    { value: 'RECOMMENDED',          label: '⭐ Recommandé'             },
-    { value: 'NEUTRAL',              label: '➖ Neutre'                  },
-    { value: 'NOT_RECOMMENDED',      label: '👎 Non recommandé'          },
-  ];
+  evaluationCriteria = signal<{ id: number; name: string; score: number | null; comment: string }[]>([]);
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
-    if (id) {
-      this.api.get<Interview>(`interviews/${id}`).subscribe({
-        next: (data) => { this.interview.set(data); this.loading.set(false); },
-        error: () => this.loading.set(false)
-      });
-    }
+    if (!id) return;
+
+    this.api.get<Interview>(`interviews/${id}`).subscribe({
+      next: (data) => {
+        this.interview.set(data);
+        this.loading.set(false);
+        const userId = this.authService.currentUser()?.id;
+        if (userId) this.feedbackForm.patchValue({ evaluatorId: userId });
+        this.loadCriteria(data.type);
+      },
+      error: () => this.loading.set(false)
+    });
   }
 
-  isManager(): boolean {
-    return this.authService.currentUser()?.role === 'MANAGER';
+  private loadCriteria(interviewType: string): void {
+    this.api.get<any[]>('admin/criteria').subscribe({
+      next: (criteria) => {
+        const filtered = (criteria ?? []).filter(c => c.interviewType === interviewType && c.isActive);
+        this.evaluationCriteria.set(filtered.map(c => ({ id: c.id, name: c.name, score: null, comment: '' })));
+      },
+      error: () => {
+        const defaults = interviewType === 'SOFT_SKILLS'
+          ? [
+              { id: 1, name: 'Communication', score: null, comment: '' },
+              { id: 2, name: 'Motivation', score: null, comment: '' },
+              { id: 3, name: 'Travail en équipe', score: null, comment: '' },
+              { id: 4, name: 'Résolution problèmes', score: null, comment: '' },
+              { id: 5, name: 'Adaptabilité', score: null, comment: '' },
+            ]
+          : [
+              { id: 6, name: 'Maîtrise technique', score: null, comment: '' },
+              { id: 7, name: 'Qualité du code', score: null, comment: '' },
+              { id: 8, name: 'Architecture', score: null, comment: '' },
+              { id: 9, name: 'Algorithmique', score: null, comment: '' },
+            ];
+        this.evaluationCriteria.set(defaults);
+      }
+    });
   }
+
+  /** ✅ Utilisé par le template pour récupérer la valeur sans `as` */
+  getInputValue(event: Event): string {
+    const target = event.target as HTMLInputElement | HTMLTextAreaElement | null;
+    return target?.value ?? '';
+  }
+
+  updateCriterionScore(id: number, value: string | null | undefined): void {
+    const score = value != null ? +value : null;
+    this.evaluationCriteria.update(list =>
+      list.map(c => c.id === id ? { ...c, score } : c)
+    );
+  }
+
+  updateCriterionComment(id: number, value: string | null | undefined): void {
+    this.evaluationCriteria.update(list =>
+      list.map(c => c.id === id ? { ...c, comment: value ?? '' } : c)
+    );
+  }
+
+  isManager(): boolean   { return this.authService.currentUser()?.role === 'MANAGER'; }
+  isRecruiter(): boolean { return this.authService.currentUser()?.role === 'RECRUITER'; }
+  isAdmin(): boolean     { return this.authService.currentUser()?.role === 'ADMIN'; }
 
   canCancel(): boolean {
-    const role = this.authService.currentUser()?.role;
-    return (role === 'ADMIN' || role === 'RECRUITER') &&
-           this.interview()?.status !== 'CANCELLED' &&
-           this.interview()?.status !== 'COMPLETED';
+    return (this.isAdmin() || this.isRecruiter()) &&
+      !['CANCELLED', 'COMPLETED'].includes(this.interview()?.status ?? '');
   }
 
   canSubmitFeedback(): boolean {
-    const role = this.authService.currentUser()?.role;
-    return (role === 'MANAGER' || role === 'RECRUITER' || role === 'ADMIN') &&
-           this.interview()?.status === 'COMPLETED';
+    return (this.isManager() || this.isRecruiter() || this.isAdmin()) &&
+      this.interview()?.status === 'COMPLETED';
   }
 
   cancel(): void {
@@ -78,23 +120,40 @@ export class InterviewDetailComponent implements OnInit {
         this.interview.update(i => i ? { ...i, status: 'CANCELLED' } : i);
         this.actionMsg.set('Entretien annulé');
         setTimeout(() => this.actionMsg.set(null), 3000);
+      },
+      error: (err) => {
+        this.actionError.set(err?.error?.message ?? 'Erreur lors de l\'annulation');
+        setTimeout(() => this.actionError.set(null), 4000);
       }
     });
   }
 
   saveFeedback(): void {
-    const id = this.interview()?.id;
-    if (!id) return;
+    const interview = this.interview();
+    if (!interview) return;
+
+    const payload = {
+      interviewId:   interview.id,
+      evaluatorId:   this.feedbackForm.value.evaluatorId ?? this.authService.currentUser()?.id,
+      overallScore:  this.feedbackForm.value.overallScore,
+      generalComment: this.feedbackForm.value.generalComment,
+      recommendation: this.feedbackForm.value.recommendation,
+      criteriaEvaluations: this.evaluationCriteria()
+        .filter(c => c.score != null)
+        .map(c => ({ criterionId: c.id, score: c.score, comment: c.comment }))
+    };
+
     this.savingFb.set(true);
-    this.api.post<void>(`interviews/${id}/feedback`, this.feedbackForm.value).subscribe({
+    this.api.post<void>('feedbacks', payload).subscribe({
       next: () => {
         this.actionMsg.set('Feedback enregistré avec succès');
         this.savingFb.set(false);
         setTimeout(() => this.actionMsg.set(null), 3000);
       },
       error: (err) => {
-        this.actionMsg.set(err?.error?.message ?? 'Erreur lors de la sauvegarde');
+        this.actionError.set(err?.error?.message ?? 'Erreur lors de la sauvegarde');
         this.savingFb.set(false);
+        setTimeout(() => this.actionError.set(null), 4000);
       }
     });
   }
@@ -102,7 +161,7 @@ export class InterviewDetailComponent implements OnInit {
   getStatusColor(status: string): string {
     const map: Record<string, string> = {
       SCHEDULED: 'amber', CONFIRMED: 'jade', COMPLETED: 'gray',
-      CANCELLED: 'rose', RESCHEDULED: 'blue'
+      CANCELLED: 'rose',  RESCHEDULED: 'blue'
     };
     return map[status] ?? 'gray';
   }
@@ -110,7 +169,7 @@ export class InterviewDetailComponent implements OnInit {
   getStatusLabel(status: string): string {
     const map: Record<string, string> = {
       SCHEDULED: 'Planifié', CONFIRMED: 'Confirmé', COMPLETED: 'Terminé',
-      CANCELLED: 'Annulé', RESCHEDULED: 'Reprogrammé'
+      CANCELLED: 'Annulé',  RESCHEDULED: 'Reprogrammé'
     };
     return map[status] ?? status;
   }

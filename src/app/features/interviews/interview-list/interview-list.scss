@@ -142,5 +142,55 @@
   &--error { background: rgba(244,63,94,.1); border: 1px solid rgba(244,63,94,.25); color: #f43f5e; }
 }
 
+.interview-card {
+  cursor: default; 
+  &.has-feedback {
+    border-left: 4px solid var(--jade);
+  }
+}
+
+.interview-date, .interview-info {
+  cursor: pointer; 
+}
+
+.feedback-actions {
+  margin-top: 0.75rem;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.btn-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.8rem;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &--view {
+    background: rgba(16,185,129, 0.1);
+    color: var(--jade);
+    border-color: rgba(16,185,129, 0.2);
+    &:hover { background: var(--jade); color: #fff; }
+  }
+
+  &--add {
+    background: rgba(59,130,246, 0.1);
+    color: var(--blue);
+    border-color: rgba(59,130,246, 0.2);
+    &:hover { background: var(--blue); color: #fff; }
+  }
+}
+
+.card-status-badge {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+}
+
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
